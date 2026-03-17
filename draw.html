@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>童趣畫布 - 手寫同步教室</title>
+    
+    <!-- Tailwind CSS (樣式) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Noto Sans TC -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome (圖示) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            yellow: '#FFD93D',
+                            orange: '#FF8400',
+                            blue: '#4D96FF',
+                            green: '#6BCB77',
+                            red: '#FF6B6B',
+                            bg: '#FFFDF5'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* 禁用 iOS 橡皮筋捲動效果，確保畫布體驗 */
+        body {
+            overscroll-behavior: none;
+            touch-action: none;
+            background-color: #FFFDF5;
+            background-image: radial-gradient(#FFD93D 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        
+        /* 畫筆游標 */
+        .cursor-pen { cursor: crosshair; }
+        
+        /* 自定義捲軸 */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #FFD93D; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #FF8400; }
+
+        /* Modal 動畫 */
+        .modal-enter { opacity: 0; transform: scale(0.95); }
+        .modal-enter-active { opacity: 1; transform: scale(1); transition: all 0.3s ease-out; }
+        .modal-leave-active { opacity: 0; transform: scale(0.95); transition: all 0.2s ease-in; }
+    </style>
+</head>
+<body class="text-gray-700 h-screen overflow-hidden flex flex-col font-sans">
+
+    <!-- 用於硬編碼的 GAS URL (如果老師想直接修改檔案) -->
+    <script>
+        const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbzXLP0XZNnIE8UCXG_yK6DsBb_jQzsxootLklRm3NgBJ89ltrpFvwULkojkFbKiLTMXww/exec"; 
+    </script>
+
+    <!-- ================= 頁面路由管理 ================= -->
+    <div id="app" class="relative w-full h-full">
+        
+        <!-- 1. 首頁 (入口選擇) -->
+        <div id="view-home" class="view-section w-full h-full flex flex-col items-center justify-center p-4">
+            <h1 class="text-4xl md:text-6xl font-bold text-brand-orange mb-8 tracking-wider drop-shadow-sm">
+                <i class="fas fa-paint-brush mr-3"></i>童趣畫布
+            </h1>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
+                <!-- 學生入口 -->
+                <button onclick="app.enterStudentMode()" class="group relative bg-white border-4 border-brand-green rounded-3xl p-8 shadow-xl hover:-translate-y-2 transition-transform duration-200">
+                    <div class="absolute -top-4 -right-4 bg-brand-green text-white w-12 h-12 rounded-full flex items-center justify-center text-2xl font-bold shadow">
+                        <i class="fas fa-child"></i>
+                    </div>
+                    <h2 class="text-3xl font-bold text-brand-green mb-2">我是學生</h2>
+                    <p class="text-gray-500">開始畫畫傳送給老師</p>
+                </button>
+
+                <!-- 老師入口 -->
+                <button onclick="app.enterTeacherMode()" class="group relative bg-white border-4 border-brand-blue rounded-3xl p-8 shadow-xl hover:-translate-y-2 transition-transform duration-200">
+                    <div class="absolute -top-4 -right-4 bg-brand-blue text-white w-12 h-12 rounded-full flex items-center justify-center text-2xl font-bold shadow">
+                        <i class="fas fa-chalkboard-teacher"></i>
+                    </div>
+                    <h2 class="text-3xl font-bold text-brand-blue mb-2">我是老師</h2>
+                    <p class="text-gray-500">查看作品與重播筆順</p>
+                </button>
+            </div>
+
+            <!-- 設定與說明按鈕 -->
+            <div class="mt-12 flex space-x-4">
+                <button onclick="settingsModal.open()" class="w-12 h-12 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-gray-600 transition shadow">
+                    <i class="fas fa-cog text-xl"></i>
+                </button>
+                <button onclick="helpModal.open()" class="w-12 h-12 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-gray-600 transition shadow">
+                    <i class="fas fa-info text-xl"></i>
+                </button>
+            </div>
+            
+            <div id="connection-status" class="mt-4 text-sm text-gray-400">
+                <!-- 連線狀態顯示處 -->
+            </div>
+        </div>
+
+        <!-- 2. 學生畫布介面 -->
+        <div id="view-student" class="view-section hidden w-full h-full flex flex-col bg-white">
+            <!-- 頂部工具列 -->
+            <div class="h-16 bg-brand-green flex items-center justify-between px-4 shadow-md z-10">
+                <div class="flex items-center text-white">
+                    <button onclick="app.goHome()" class="mr-3 hover:bg-white/20 p-2 rounded-full transition">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <span id="student-name-display" class="font-bold text-lg"></span>
+                </div>
+                <div class="flex space-x-2">
+                    <button onclick="canvasManager.undo()" class="bg-white/20 hover:bg-white/30 text-white p-2 rounded-lg transition" title="復原">
+                        <i class="fas fa-undo"></i>
+                    </button>
+                    <button onclick="canvasManager.clear()" class="bg-brand-red hover:bg-red-500 text-white p-2 px-4 rounded-lg transition shadow" title="清除">
+                        <i class="fas fa-trash-alt mr-1"></i> 清除
+                    </button>
+                    <button onclick="app.submitWork()" class="bg-brand-yellow hover:bg-yellow-400 text-gray-800 font-bold p-2 px-6 rounded-lg transition shadow border-b-4 border-yellow-600 active:border-b-0 active:translate-y-1">
+                        <i class="fas fa-paper-plane mr-2"></i> 送出
+                    </button>
+                </div>
+            </div>
+
+            <!-- 畫筆工具列 -->
+            <div class="bg-gray-100 p-2 flex justify-center space-x-4 border-b">
+                <!-- 顏色選擇 -->
+                <div class="flex space-x-2 items-center bg-white px-3 py-1 rounded-full shadow-sm">
+                    <button onclick="canvasManager.setColor('#000000')" class="w-8 h-8 rounded-full bg-black border-2 border-white shadow ring-2 ring-transparent hover:ring-gray-300"></button>
+                    <button onclick="canvasManager.setColor('#FF0000')" class="w-8 h-8 rounded-full bg-red-600 border-2 border-white shadow ring-2 ring-transparent hover:ring-gray-300"></button>
+                    <button onclick="canvasManager.setColor('#0000FF')" class="w-8 h-8 rounded-full bg-blue-600 border-2 border-white shadow ring-2 ring-transparent hover:ring-gray-300"></button>
+                    <button onclick="canvasManager.setColor('#008000')" class="w-8 h-8 rounded-full bg-green-600 border-2 border-white shadow ring-2 ring-transparent hover:ring-gray-300"></button>
+                </div>
+                <!-- 粗細選擇 -->
+                <div class="flex items-center space-x-2 bg-white px-3 py-1 rounded-full shadow-sm">
+                    <button onclick="canvasManager.setLineWidth(2)" class="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-full"><div class="bg-gray-800 rounded-full w-1 h-1"></div></button>
+                    <button onclick="canvasManager.setLineWidth(5)" class="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-full"><div class="bg-gray-800 rounded-full w-2 h-2"></div></button>
+                    <button onclick="canvasManager.setLineWidth(10)" class="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-full"><div class="bg-gray-800 rounded-full w-4 h-4"></div></button>
+                </div>
+            </div>
+
+            <!-- 繪圖區域 -->
+            <div class="flex-grow relative bg-white cursor-pen overflow-hidden touch-none" id="canvas-container">
+                <canvas id="main-canvas" class="w-full h-full"></canvas>
+            </div>
+        </div>
+
+        <!-- 3. 老師儀表板 -->
+        <div id="view-teacher" class="view-section hidden w-full h-full flex flex-col">
+            <div class="h-16 bg-brand-blue flex items-center justify-between px-4 shadow-md z-10 text-white">
+                <div class="flex items-center">
+                    <button onclick="app.goHome()" class="mr-3 hover:bg-white/20 p-2 rounded-full transition">
+                        <i class="fas fa-home"></i>
+                    </button>
+                    <h2 class="font-bold text-xl hidden md:block">作品繳交區</h2>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <span id="teacher-status" class="text-xs md:text-sm bg-blue-700 px-2 py-1 rounded hidden sm:inline-block">準備就緒</span>
+                    <button onclick="teacherApp.deleteAll()" class="bg-red-500 text-white p-2 px-3 rounded-lg font-bold hover:bg-red-600 transition shadow text-sm">
+                        <i class="fas fa-trash-alt mr-1"></i> 全部清除
+                    </button>
+                    <button onclick="teacherApp.fetchData()" class="bg-white text-brand-blue p-2 px-3 rounded-lg font-bold hover:bg-blue-50 transition shadow text-sm">
+                        <i class="fas fa-sync-alt mr-1"></i> 重新整理
+                    </button>
+                </div>
+            </div>
+
+            <!-- 作品列表 -->
+            <div class="flex-grow p-4 overflow-y-auto">
+                <div id="gallery-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                    <!-- 作品卡片將由 JS 插入 -->
+                </div>
+                <div id="empty-state" class="hidden flex flex-col items-center justify-center h-64 text-gray-400">
+                    <i class="fas fa-folder-open text-6xl mb-4"></i>
+                    <p>目前還沒有學生繳交作業喔</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. 詳細檢視與重播 -->
+        <div id="view-replay" class="view-section hidden absolute top-0 left-0 w-full h-full bg-gray-900/95 z-50 flex flex-col">
+            <div class="h-14 bg-gray-800 flex items-center justify-between px-4 text-white">
+                <div>
+                    <span id="replay-name" class="font-bold text-lg text-brand-yellow"></span>
+                    <span class="text-gray-400 text-sm ml-2">的筆順重播</span>
+                </div>
+                <button onclick="replayApp.close()" class="bg-gray-700 hover:bg-gray-600 p-2 px-4 rounded transition">
+                    <i class="fas fa-times"></i> 關閉
+                </button>
+            </div>
+            
+            <div class="flex-grow flex items-center justify-center p-4 relative">
+                <div class="relative bg-white rounded-lg shadow-2xl overflow-hidden" id="replay-container" style="max-width: 100%; max-height: 100%;">
+                    <canvas id="replay-canvas"></canvas>
+                </div>
+            </div>
+
+            <!-- 重播控制列 -->
+            <div class="h-20 bg-gray-800 flex items-center justify-center space-x-6 pb-safe">
+                <button onclick="replayApp.play()" class="w-12 h-12 rounded-full bg-brand-green hover:bg-green-500 text-white flex items-center justify-center text-xl shadow transition">
+                    <i class="fas fa-play" id="play-icon"></i>
+                </button>
+                
+                <div class="flex bg-gray-700 rounded-lg p-1">
+                    <button onclick="replayApp.setSpeed(1)" class="speed-btn px-3 py-1 rounded text-sm text-white hover:bg-gray-600 transition bg-gray-500" data-speed="1">1x</button>
+                    <button onclick="replayApp.setSpeed(2)" class="speed-btn px-3 py-1 rounded text-sm text-white hover:bg-gray-600 transition" data-speed="2">2x</button>
+                    <button onclick="replayApp.setSpeed(4)" class="speed-btn px-3 py-1 rounded text-sm text-white hover:bg-gray-600 transition" data-speed="4">4x</button>
+                </div>
+                
+                <div class="w-32 h-2 bg-gray-600 rounded-full overflow-hidden">
+                    <div id="replay-progress" class="h-full bg-brand-yellow w-0 transition-all duration-100"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= 模態視窗 (Modals) ================= -->
+
+    <!-- 通用訊息 Modal -->
+    <div id="modal-message" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 transform transition-all scale-100 mx-4">
+            <div class="flex justify-center mb-4">
+                <div id="msg-icon" class="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center text-3xl text-blue-500">
+                    <i class="fas fa-info"></i>
+                </div>
+            </div>
+            <h3 id="msg-title" class="text-xl font-bold text-center text-gray-800 mb-2">標題</h3>
+            <p id="msg-content" class="text-center text-gray-600 mb-6">內容</p>
+            <button onclick="ui.closeModal('modal-message')" class="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 rounded-xl transition">
+                知道了
+            </button>
+        </div>
+    </div>
+
+    <!-- 學生姓名輸入 Modal -->
+    <div id="modal-name" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-brand-bg/90 backdrop-blur-sm">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-8 mx-4 border-4 border-brand-green">
+            <div class="text-center mb-6">
+                <i class="fas fa-user-circle text-6xl text-brand-green mb-4"></i>
+                <h3 class="text-2xl font-bold text-gray-800">請寫上你的座號</h3>
+            </div>
+            <!-- 修改：移除了 placeholder="王小明" -->
+            <input type="text" id="input-student-name" class="w-full text-center text-2xl font-bold border-b-4 border-gray-200 focus:border-brand-green outline-none py-2 mb-8 bg-transparent" placeholder="" maxlength="10">
+            <button onclick="app.confirmStudentName()" class="w-full bg-brand-green hover:bg-green-600 text-white font-bold py-3 rounded-xl text-xl shadow-lg transition transform active:scale-95">
+                開始畫畫！
+            </button>
+        </div>
+    </div>
+
+    <!-- 老師密碼 Modal -->
+    <div id="modal-pin" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-brand-bg/90 backdrop-blur-sm">
+        <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-xs p-6 mx-4 border-4 border-brand-blue">
+            <!-- 新增：回首頁按鈕 -->
+            <button onclick="ui.hide('modal-pin')" class="absolute top-4 left-4 text-gray-400 hover:text-brand-blue transition" title="回上一頁">
+                <i class="fas fa-arrow-left text-xl"></i>
+            </button>
+            <h3 class="text-xl font-bold text-center text-brand-blue mb-4 mt-2">老師專用通道</h3>
+            <div class="flex justify-center mb-6">
+                <input type="password" id="pin-input" class="text-center text-3xl tracking-widest w-40 border-b-2 border-brand-blue outline-none" placeholder="****" maxlength="4" inputmode="numeric">
+            </div>
+            <div class="grid grid-cols-3 gap-3 mb-4">
+                <button onclick="app.appendPin('1')" class="bg-gray-100 hover:bg-gray-200 p-3 rounded-lg font-bold text-xl">1</button>
+                <button onclick="app.appendPin('2')" class="bg-gray-100 hover:bg-gray-200 p-3 rounded-lg font-bold text-xl">2</button>
+                <button onclick="app.appendPin('3')" class="bg-gray-100 hover:bg-gray-200 p-3 rounded-lg font-bold text-xl">3</button>
+                <button onclick="app.appendPin('4')" class="bg-gray-100 hover:bg-gray-200 p-3 rounded-lg font-bold text-xl">4</button>
+                <button onclick="app.appendPin('5')" class="bg-gray-100 hover:bg-gray-200 p-3 rounded-lg font-bold text-xl">5</button>
+                <button onclick="app.appendPin('6')" class="bg-gray-100 hover:bg-gray-200 p-3 rounded-lg font-bold text-xl">6</button>
+                <button onclick="app.appendPin('7')" class="bg-gray-100 hover:bg-gray-200 p-3 rounded-lg font-bold text-xl">7</button>
+                <button onclick="app.appendPin('8')" class="bg-gray-100 hover:bg-gray-200 p-3 rounded-lg font-bold text-xl">8</button>
+                <button onclick="app.appendPin('9')" class="bg-gray-100 hover:bg-gray-200 p-3 rounded-lg font-bold text-xl">9</button>
+                <button onclick="app.clearPin()" class="bg-red-100 hover:bg-red-200 text-red-500 p-3 rounded-lg font-bold"><i class="fas fa-times"></i></button>
+                <button onclick="app.appendPin('0')" class="bg-gray-100 hover:bg-gray-200 p-3 rounded-lg font-bold text-xl">0</button>
+                <button onclick="app.checkPin()" class="bg-brand-blue hover:bg-blue-600 text-white p-3 rounded-lg font-bold"><i class="fas fa-check"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 設定 Modal -->
+    <div id="modal-settings" class="hidden fixed inset-0 z-[80] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 mx-4 max-h-[90vh] overflow-y-auto">
+            <h3 class="text-2xl font-bold mb-4 flex items-center"><i class="fas fa-cog text-gray-500 mr-2"></i> 設定</h3>
+            
+            <div class="mb-6">
+                <label class="block text-sm font-bold text-gray-700 mb-2">GAS Web App URL (Script URL)</label>
+                <div class="relative">
+                    <input type="password" id="setting-gas-url" class="w-full border rounded-lg p-3 pr-10 focus:ring-2 focus:ring-brand-blue outline-none" placeholder="https://script.google.com/macros/s/..." onchange="settingsModal.save()">
+                    <button onclick="settingsModal.toggleVisibility()" class="absolute right-3 top-3 text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-eye" id="setting-eye-icon"></i>
+                    </button>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">請貼上部署為 Web App 後的網址</p>
+            </div>
+
+            <div class="mb-6 border-t pt-4">
+                <h4 class="font-bold text-gray-700 mb-2">分享此設定</h4>
+                <div class="bg-gray-50 p-4 rounded-lg flex flex-col items-center">
+                    <div id="qrcode-container" class="bg-white p-2 rounded shadow mb-3 w-40 h-40 flex items-center justify-center text-gray-300">
+                        QR Code
+                    </div>
+                    <button onclick="settingsModal.generateShareLink()" class="bg-brand-orange text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-orange-600 w-full mb-2">
+                        <i class="fas fa-link mr-1"></i> 產生分享連結與 QR Code
+                    </button>
+                    <input type="text" id="share-link-input" readonly class="w-full bg-white border px-2 py-1 text-xs text-gray-500 rounded cursor-pointer" onclick="this.select()">
+                </div>
+            </div>
+
+            <div class="flex justify-between border-t pt-4">
+                <button onclick="settingsModal.clear()" class="text-red-500 font-bold px-4 py-2 hover:bg-red-50 rounded">
+                    清除設定
+                </button>
+                <button onclick="ui.closeModal('modal-settings')" class="bg-gray-800 text-white font-bold px-6 py-2 rounded hover:bg-gray-900">
+                    關閉
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 說明 Modal -->
+    <div id="modal-help" class="hidden fixed inset-0 z-[80] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl p-6 mx-4 h-[80vh] flex flex-col">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-2xl font-bold"><i class="fas fa-code text-brand-blue mr-2"></i> 後端程式碼與部署</h3>
+                <button onclick="ui.closeModal('modal-help')" class="text-gray-500 hover:text-gray-800 text-xl"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <div class="bg-blue-50 p-4 rounded-lg mb-4 text-sm text-blue-800">
+                <strong>部署步驟：</strong>
+                <ol class="list-decimal ml-5 mt-1 space-y-1">
+                    <li>建立新的 Google Apps Script 專案。</li>
+                    <li>將下方代碼複製貼上到 <code>Code.gs</code>。</li>
+                    <li>點擊右上角「部署」 > 「新增部署作業」。</li>
+                    <li>選擇類型「網頁應用程式」。</li>
+                    <li><strong>執行身分：我 (Me)</strong>。</li>
+                    <li><strong>誰可以存取：任何人 (Anyone)</strong> (關鍵！)。</li>
+                    <li>複製生成的網址，貼回本頁面的設定中。</li>
+                </ol>
+            </div>
+
+            <div class="relative flex-grow overflow-hidden border rounded-lg bg-gray-800 text-gray-200">
+                <button onclick="helpModal.copyCode()" class="absolute top-2 right-2 bg-white/10 hover:bg-white/20 text-white px-3 py-1 rounded text-sm z-10 transition">
+                    <i class="fas fa-copy mr-1"></i> 複製程式碼
+                </button>
+                <textarea id="gas-code-display" class="w-full h-full p-4 bg-gray-800 font-mono text-xs resize-none outline-none" readonly></textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- 載入中遮罩 -->
+    <div id="loading-overlay" class="hidden fixed inset-0 z-[200] flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
+        <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-brand-orange mb-4"></div>
+        <p id="loading-text" class="text-xl font-bold text-gray-700 animate-pulse">處理中...</p>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // ================= 全域變數與初始化 =================
+        const CONFIG = {
+            PIN: '1234',
+            STROKE_LIMIT: 3000 // 防止過多筆畫
+        };
+
+        const state = {
+            mode: 'home', // home, student, teacher
+            gasUrl: '',
+            studentName: '',
+            currentStrokes: [], // 儲存筆畫數據 [{color, width, points: [{x,y},...]} ]
+            isDrawing: false,
+            currentPath: null, // 當前正在畫的路徑
+            ctx: null,
+            canvas: null,
+            replayCtx: null
+        };
+
+        // ================= UI 工具 =================
+        const ui = {
+            show: (id) => document.getElementById(id).classList.remove('hidden'),
+            hide: (id) => document.getElementById(id).classList.add('hidden'),
+            
+            showModal: (title, message, type = 'info') => {
+                document.getElementById('msg-title').innerText = title;
+                document.getElementById('msg-content').innerText = message;
+                const icon = document.getElementById('msg-icon');
+                
+                // 根據類型換顏色
+                if(type === 'error') {
+                    icon.className = "w-16 h-16 rounded-full bg-red-100 flex items-center justify-center text-3xl text-red-500";
+                    icon.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
+                } else if (type === 'success') {
+                    icon.className = "w-16 h-16 rounded-full bg-green-100 flex items-center justify-center text-3xl text-green-500";
+                    icon.innerHTML = '<i class="fas fa-check"></i>';
+                } else {
+                    icon.className = "w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center text-3xl text-blue-500";
+                    icon.innerHTML = '<i class="fas fa-info"></i>';
+                }
+                
+                ui.show('modal-message');
+            },
+            
+            closeModal: (id) => ui.hide(id),
+            
+            loading: (show, text = "載入中...") => {
+                document.getElementById('loading-text').innerText = text;
+                show ? ui.show('loading-overlay') : ui.hide('loading-overlay');
+            },
+            
+            switchView: (viewId) => {
+                document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+                ui.show(viewId);
+                // 特殊處理：進入學生模式要重設 Canvas 大小
+                if (viewId === 'view-student') {
+                    setTimeout(canvasManager.resize, 100);
+                }
+            }
+        };
+
+        // ================= 應用程式核心邏輯 =================
+        const app = {
+            init: () => {
+                // 1. 決定 GAS URL 優先順序
+                const urlParams = new URLSearchParams(window.location.search);
+                const encodedConfig = urlParams.get('config');
+                const localUrl = localStorage.getItem('GAS_URL');
+
+                if (encodedConfig) {
+                    try {
+                        state.gasUrl = atob(encodedConfig);
+                        localStorage.setItem('GAS_URL', state.gasUrl);
+                        // 清除 URL 參數讓網址好看點
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                        ui.showModal("設定已匯入", "已成功讀取分享連結中的伺服器設定！", "success");
+                    } catch (e) {
+                        console.error("Config decode failed");
+                    }
+                } else if (localUrl) {
+                    state.gasUrl = localUrl;
+                } else if (typeof DEFAULT_GAS_URL !== 'undefined' && DEFAULT_GAS_URL) {
+                    state.gasUrl = DEFAULT_GAS_URL;
+                }
+
+                // 更新設定畫面的輸入框
+                document.getElementById('setting-gas-url').value = state.gasUrl;
+                
+                // 顯示連線狀態
+                const statusEl = document.getElementById('connection-status');
+                if(state.gasUrl) {
+                    statusEl.innerText = "✅ 已設定伺服器連線";
+                    statusEl.classList.add("text-green-500");
+                } else {
+                    statusEl.innerText = "⚠️ 尚未設定 GAS 伺服器，請點擊設定按鈕";
+                    statusEl.classList.add("text-orange-400");
+                }
+            },
+
+            enterStudentMode: () => {
+                if (!state.gasUrl) {
+                    ui.showModal("尚未設定", "請先設定 Google Apps Script 網址才能使用。", "error");
+                    settingsModal.open();
+                    return;
+                }
+                ui.show('modal-name');
+                document.getElementById('input-student-name').focus();
+            },
+
+            confirmStudentName: () => {
+                const name = document.getElementById('input-student-name').value.trim();
+                if (!name) return;
+                state.studentName = name;
+                document.getElementById('student-name-display').innerText = name;
+                ui.hide('modal-name');
+                ui.switchView('view-student');
+                canvasManager.init();
+            },
+
+            enterTeacherMode: () => {
+                if (!state.gasUrl) {
+                    ui.showModal("尚未設定", "請先設定 Google Apps Script 網址。", "error");
+                    settingsModal.open();
+                    return;
+                }
+                document.getElementById('pin-input').value = "";
+                ui.show('modal-pin');
+            },
+
+            goHome: () => {
+                ui.switchView('view-home');
+            },
+
+            // 老師 PIN 碼邏輯
+            appendPin: (num) => {
+                const input = document.getElementById('pin-input');
+                if (input.value.length < 4) input.value += num;
+            },
+            clearPin: () => document.getElementById('pin-input').value = "",
+            checkPin: () => {
+                const pin = document.getElementById('pin-input').value;
+                if (pin === CONFIG.PIN) {
+                    ui.hide('modal-pin');
+                    ui.switchView('view-teacher');
+                    teacherApp.init();
+                } else {
+                    document.getElementById('pin-input').value = "";
+                    // 簡單震動提示
+                    const modal = document.querySelector('#modal-pin > div');
+                    modal.classList.add('animate-pulse', 'border-red-500');
+                    setTimeout(() => modal.classList.remove('animate-pulse', 'border-red-500'), 500);
+                }
+            },
+
+            submitWork: async () => {
+                if (state.currentStrokes.length === 0) {
+                    ui.showModal("空白畫布", "請先畫點東西再送出喔！", "error");
+                    return;
+                }
+
+                ui.loading(true, "正在將作品傳送給老師...");
+
+                // 產生預覽圖 (縮小至 400px 以節省空間並加速)
+                // 使用 Auto-Fit 技術，保證不留白、不裁切
+                const previewBase64 = canvasManager.getCompressedImage(400);
+
+                const payload = {
+                    action: "submit",
+                    name: state.studentName,
+                    image: previewBase64,
+                    strokes: state.currentStrokes
+                };
+
+                try {
+                    const response = await fetch(state.gasUrl, {
+                        method: 'POST',
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await response.json();
+                    
+                    if (result.status === 'success') {
+                        ui.loading(false);
+                        ui.showModal("傳送成功", "老師已經收到你的作品囉！", "success");
+                        // 選擇是否清空畫布，這裡不清空讓學生可以繼續畫
+                    } else {
+                        throw new Error(result.message);
+                    }
+                } catch (error) {
+                    ui.loading(false);
+                    ui.showModal("傳送失敗", "請檢查網路連線或設定。\n錯誤: " + error.message, "error");
+                }
+            }
+        };
+
+        // ================= 畫布管理器 (核心) =================
+        const canvasManager = {
+            settings: { color: '#000000', lineWidth: 5 },
+            history: [], // 用於 Undo
+
+            init: () => {
+                state.canvas = document.getElementById('main-canvas');
+                state.ctx = state.canvas.getContext('2d');
+                
+                // 事件監聽
+                const cvs = state.canvas;
+                
+                // 觸控
+                cvs.addEventListener('touchstart', canvasManager.start);
+                cvs.addEventListener('touchmove', canvasManager.move);
+                cvs.addEventListener('touchend', canvasManager.end);
+                
+                // 滑鼠
+                cvs.addEventListener('mousedown', canvasManager.start);
+                cvs.addEventListener('mousemove', canvasManager.move);
+                cvs.addEventListener('mouseup', canvasManager.end);
+                cvs.addEventListener('mouseleave', canvasManager.end);
+
+                canvasManager.resize();
+                window.addEventListener('resize', canvasManager.resize);
+            },
+
+            resize: () => {
+                const container = document.getElementById('canvas-container');
+                const cvs = state.canvas;
+                if (!container || !cvs) return;
+
+                // 處理 Retina 螢幕清晰度
+                const dpr = window.devicePixelRatio || 1;
+                const rect = container.getBoundingClientRect();
+                
+                // 只有當尺寸改變時才重設，避免清除畫布
+                if (cvs.width !== rect.width * dpr || cvs.height !== rect.height * dpr) {
+                    // 保存當前圖像
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = cvs.width;
+                    tempCanvas.height = cvs.height;
+                    tempCanvas.getContext('2d').drawImage(cvs, 0, 0);
+
+                    cvs.width = rect.width * dpr;
+                    cvs.height = rect.height * dpr;
+                    cvs.style.width = `${rect.width}px`;
+                    cvs.style.height = `${rect.height}px`;
+                    
+                    state.ctx.scale(dpr, dpr);
+                    state.ctx.lineCap = 'round';
+                    state.ctx.lineJoin = 'round';
+                    
+                    // 恢復圖像
+                    state.ctx.drawImage(tempCanvas, 0, 0, cvs.width/dpr, cvs.height/dpr);
+                }
+            },
+
+            getPos: (e) => {
+                const cvs = state.canvas;
+                const rect = cvs.getBoundingClientRect();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                return {
+                    x: clientX - rect.left,
+                    y: clientY - rect.top
+                };
+            },
+
+            start: (e) => {
+                if(e.type !== 'mousedown') e.preventDefault(); // 防止滾動
+                state.isDrawing = true;
+                const pos = canvasManager.getPos(e);
+                
+                state.ctx.beginPath();
+                state.ctx.moveTo(pos.x, pos.y);
+                state.ctx.strokeStyle = canvasManager.settings.color;
+                state.ctx.lineWidth = canvasManager.settings.lineWidth;
+                
+                // 初始化新的一筆路徑
+                state.currentPath = {
+                    color: canvasManager.settings.color,
+                    width: canvasManager.settings.lineWidth,
+                    points: [{x: pos.x, y: pos.y}]
+                };
+            },
+
+            move: (e) => {
+                if (!state.isDrawing) return;
+                e.preventDefault();
+                const pos = canvasManager.getPos(e);
+                
+                state.ctx.lineTo(pos.x, pos.y);
+                state.ctx.stroke();
+                
+                // 記錄點
+                if (state.currentPath) {
+                    state.currentPath.points.push({x: pos.x, y: pos.y});
+                }
+            },
+
+            end: (e) => {
+                if (!state.isDrawing) return;
+                state.isDrawing = false;
+                state.ctx.closePath();
+                
+                if (state.currentPath && state.currentPath.points.length > 0) {
+                    state.currentStrokes.push(state.currentPath);
+                    state.currentPath = null;
+                }
+            },
+
+            setColor: (c) => canvasManager.settings.color = c,
+            setLineWidth: (w) => canvasManager.settings.lineWidth = w,
+            
+            clear: () => {
+                if(confirm('確定要清除所有內容嗎？')) {
+                    const cvs = state.canvas;
+                    // 使用 clearRect 清除邏輯坐標範圍
+                    const width = cvs.width / (window.devicePixelRatio || 1);
+                    const height = cvs.height / (window.devicePixelRatio || 1);
+                    state.ctx.clearRect(0, 0, width, height);
+                    state.currentStrokes = [];
+                }
+            },
+
+            undo: () => {
+                if (state.currentStrokes.length === 0) return;
+                state.currentStrokes.pop();
+                canvasManager.redrawAll();
+            },
+
+            redrawAll: () => {
+                const cvs = state.canvas;
+                const width = cvs.width / (window.devicePixelRatio || 1);
+                const height = cvs.height / (window.devicePixelRatio || 1);
+                state.ctx.clearRect(0, 0, width, height);
+
+                state.currentStrokes.forEach(stroke => {
+                    state.ctx.beginPath();
+                    state.ctx.strokeStyle = stroke.color;
+                    state.ctx.lineWidth = stroke.width;
+                    if(stroke.points.length > 0) {
+                        state.ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+                        for(let i=1; i<stroke.points.length; i++) {
+                            state.ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
+                        }
+                    }
+                    state.ctx.stroke();
+                    state.ctx.closePath();
+                });
+            },
+
+            getCompressedImage: (targetW = 400) => { // 預設 400px 寬，節省流量並適合列表展示
+                // 1. 計算所有筆畫的邊界 (Bounding Box)
+                let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+                let hasPoints = false;
+
+                state.currentStrokes.forEach(stroke => {
+                    stroke.points.forEach(p => {
+                        if (p.x < minX) minX = p.x;
+                        if (p.x > maxX) maxX = p.x;
+                        if (p.y < minY) minY = p.y;
+                        if (p.y > maxY) maxY = p.y;
+                        hasPoints = true;
+                    });
+                });
+
+                // 設定縮圖比例 4:3
+                const targetH = Math.floor(targetW * 0.75);
+                const tmpCanvas = document.createElement('canvas');
+                tmpCanvas.width = targetW;
+                tmpCanvas.height = targetH;
+                const ctx = tmpCanvas.getContext('2d');
+                
+                // 填滿白色背景
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(0, 0, targetW, targetH);
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+
+                if (!hasPoints) return tmpCanvas.toDataURL('image/jpeg', 0.8);
+
+                // 2. 計算縮放與位移 (Auto-Fit)
+                const padding = 20; // 邊距
+                const contentW = maxX - minX || 1;
+                const contentH = maxY - minY || 1;
+                
+                // 確保內容完全放入
+                const scaleX = (targetW - padding * 2) / contentW;
+                const scaleY = (targetH - padding * 2) / contentH;
+                const scale = Math.min(scaleX, scaleY);
+                
+                // 計算置中位移
+                const centerX = (minX + maxX) / 2;
+                const centerY = (minY + maxY) / 2;
+                
+                const offsetX = (targetW / 2) - (centerX * scale);
+                const offsetY = (targetH / 2) - (centerY * scale);
+
+                // 3. 重繪筆跡
+                state.currentStrokes.forEach(stroke => {
+                    ctx.beginPath();
+                    ctx.strokeStyle = stroke.color;
+                    // 縮小後線條可能太細，設定最小值
+                    ctx.lineWidth = Math.max(1.5, stroke.width * scale); 
+                    
+                    if (stroke.points.length > 0) {
+                        const startX = stroke.points[0].x * scale + offsetX;
+                        const startY = stroke.points[0].y * scale + offsetY;
+                        ctx.moveTo(startX, startY);
+                        
+                        for (let i = 1; i < stroke.points.length; i++) {
+                            const px = stroke.points[i].x * scale + offsetX;
+                            const py = stroke.points[i].y * scale + offsetY;
+                            ctx.lineTo(px, py);
+                        }
+                    }
+                    ctx.stroke();
+                });
+
+                return tmpCanvas.toDataURL('image/jpeg', 0.8);
+            }
+        };
+
+        // ================= 老師端功能 =================
+        const teacherApp = {
+            data: [],
+            
+            init: () => {
+                teacherApp.fetchData();
+            },
+
+            fetchData: async () => {
+                ui.loading(true, "更新作業列表中...");
+                try {
+                    const response = await fetch(`${state.gasUrl}?action=read`);
+                    const result = await response.json();
+                    
+                    if (result.status === 'success') {
+                        teacherApp.data = result.data;
+                        teacherApp.renderGrid();
+                        ui.showModal("更新完成", `成功載入 ${result.data.length} 份作品`, "success");
+                    } else {
+                        throw new Error(result.message);
+                    }
+                } catch (error) {
+                    ui.showModal("讀取失敗", error.message, "error");
+                } finally {
+                    ui.loading(false);
+                }
+            },
+            
+            deleteAll: async () => {
+                if(!confirm('⚠️ 警告：這將會刪除所有學生的作品，且無法復原！\n\n確定要全部清除嗎？')) return;
+                
+                ui.loading(true, "正在刪除所有作品...");
+                try {
+                    const response = await fetch(state.gasUrl, {
+                        method: 'POST',
+                        body: JSON.stringify({ action: "deleteAll" })
+                    });
+                    const result = await response.json();
+                    
+                    if(result.status === 'success') {
+                        ui.showModal("清除完成", "所有作品已清空", "success");
+                        teacherApp.fetchData();
+                    } else {
+                        throw new Error(result.message);
+                    }
+                } catch (error) {
+                    ui.showModal("刪除失敗", error.message, "error");
+                    ui.loading(false);
+                }
+            },
+
+            deleteItem: async (index, event) => {
+                event.stopPropagation(); // 阻止冒泡觸發卡片點擊
+                const item = teacherApp.data[index];
+                
+                if(!confirm(`確定要刪除 ${item.name} 的作品嗎？`)) return;
+                
+                ui.loading(true, "刪除中...");
+                try {
+                    const response = await fetch(state.gasUrl, {
+                        method: 'POST',
+                        body: JSON.stringify({ 
+                            action: "delete",
+                            timestamp: item.timestamp
+                        })
+                    });
+                    const result = await response.json();
+                    
+                    if(result.status === 'success') {
+                        // 移除本地數據並重新渲染，省去重抓的時間
+                        teacherApp.data.splice(index, 1);
+                        teacherApp.renderGrid();
+                        ui.loading(false);
+                    } else {
+                        throw new Error(result.message);
+                    }
+                } catch (error) {
+                    ui.showModal("刪除失敗", error.message, "error");
+                    ui.loading(false);
+                }
+            },
+
+            renderGrid: () => {
+                const grid = document.getElementById('gallery-grid');
+                const empty = document.getElementById('empty-state');
+                grid.innerHTML = '';
+                
+                if (teacherApp.data.length === 0) {
+                    empty.classList.remove('hidden');
+                    return;
+                }
+                empty.classList.add('hidden');
+
+                teacherApp.data.forEach((item, index) => {
+                    // 轉換時間格式
+                    const date = new Date(item.timestamp);
+                    const timeStr = `${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
+                    
+                    const card = document.createElement('div');
+                    card.className = "bg-white rounded-xl shadow hover:shadow-xl transition transform hover:-translate-y-1 cursor-pointer overflow-hidden border border-gray-100 group relative";
+                    card.onclick = () => replayApp.open(index);
+                    
+                    // 卡片內容
+                    card.innerHTML = `
+                        <div class="h-32 bg-gray-100 overflow-hidden relative">
+                            <img src="${item.image}" class="w-full h-full object-contain p-2">
+                            <div class="absolute bottom-0 right-0 bg-brand-blue text-white text-xs px-2 py-1 rounded-tl-lg opacity-90">
+                                <i class="fas fa-play-circle mr-1"></i> 重播
+                            </div>
+                        </div>
+                        <div class="p-2 flex justify-between items-center">
+                            <div class="overflow-hidden">
+                                <h3 class="font-bold text-gray-800 text-base truncate">${item.name}</h3>
+                                <p class="text-xs text-gray-400 mt-1"><i class="far fa-clock"></i> ${timeStr}</p>
+                            </div>
+                            <button onclick="teacherApp.deleteItem(${index}, event)" class="text-gray-300 hover:text-red-500 p-2 rounded-full transition" title="刪除作品">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                });
+            }
+        };
+
+        // ================= 重播系統 (Replay Engine) =================
+        const replayApp = {
+            strokes: [],
+            speed: 1,
+            rafId: null,
+            ctx: null,
+            canvas: null,
+            scale: 1,
+            offsetX: 0,
+            offsetY: 0,
+            
+            open: (index) => {
+                const item = teacherApp.data[index];
+                document.getElementById('replay-name').innerText = item.name;
+                ui.switchView('view-replay');
+                
+                // 準備 Canvas
+                const container = document.getElementById('replay-container');
+                const wrapper = container.parentElement; // 獲取外層容器 (flex-grow 的那個 div)
+                const cvs = document.getElementById('replay-canvas');
+                
+                // 1. 設定畫布尺寸 (處理 Retina)
+                const dpr = window.devicePixelRatio || 1;
+                
+                // 修改：基於 wrapper (父層可用空間) 來計算尺寸，而不是 container 自身的內容尺寸
+                // 這樣可以讓畫布盡可能填滿螢幕
+                const rect = wrapper.getBoundingClientRect();
+                // 扣除 padding (p-4 = 1rem = 16px, 兩邊共 32px)
+                const width = rect.width - 32;
+                const height = rect.height - 32;
+
+                // 強制設定 container 大小
+                container.style.width = `${width}px`;
+                container.style.height = `${height}px`;
+                
+                cvs.width = width * dpr;
+                cvs.height = height * dpr;
+                cvs.style.width = `${width}px`;
+                cvs.style.height = `${height}px`;
+                
+                replayApp.ctx = cvs.getContext('2d');
+                replayApp.ctx.scale(dpr, dpr); // 預設縮放
+                replayApp.strokes = item.strokes; // 從數據中獲取筆畫
+                
+                // 2. 計算筆畫邊界 (Bounding Box) 以便自動縮放
+                if (replayApp.strokes && replayApp.strokes.length > 0) {
+                    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+                    let hasPoints = false;
+
+                    replayApp.strokes.forEach(stroke => {
+                        stroke.points.forEach(p => {
+                            if (p.x < minX) minX = p.x;
+                            if (p.x > maxX) maxX = p.x;
+                            if (p.y < minY) minY = p.y;
+                            if (p.y > maxY) maxY = p.y;
+                            hasPoints = true;
+                        });
+                    });
+
+                    if (hasPoints) {
+                        // 筆畫實際寬高
+                        const drawingW = maxX - minX || 100; // 防止除以0
+                        const drawingH = maxY - minY || 100;
+                        const canvasW = width;
+                        const canvasH = height;
+
+                        // 計算縮放比例 (留 10% 邊距)
+                        const scaleX = (canvasW * 0.9) / drawingW;
+                        const scaleY = (canvasH * 0.9) / drawingH;
+                        
+                        // 選擇較小的比例以確保全部都看得到
+                        replayApp.scale = Math.min(scaleX, scaleY);
+
+                        // 計算置中偏移量
+                        const centerX = (minX + maxX) / 2;
+                        const centerY = (minY + maxY) / 2;
+                        
+                        // 目標中心 (畫布中心)
+                        const targetCenterX = canvasW / 2;
+                        const targetCenterY = canvasH / 2;
+
+                        replayApp.offsetX = targetCenterX - (centerX * replayApp.scale);
+                        replayApp.offsetY = targetCenterY - (centerY * replayApp.scale);
+                    } else {
+                        replayApp.scale = 1;
+                        replayApp.offsetX = 0;
+                        replayApp.offsetY = 0;
+                    }
+                } else {
+                     replayApp.scale = 1;
+                     replayApp.offsetX = 0;
+                     replayApp.offsetY = 0;
+                }
+                
+                replayApp.play();
+            },
+
+            close: () => {
+                cancelAnimationFrame(replayApp.rafId);
+                ui.switchView('view-teacher');
+            },
+
+            play: () => {
+                cancelAnimationFrame(replayApp.rafId);
+                const ctx = replayApp.ctx;
+                
+                // 清除畫布 (使用邏輯像素寬高，因為已經 scale dpr 了)
+                const width = ctx.canvas.width / (window.devicePixelRatio || 1);
+                const height = ctx.canvas.height / (window.devicePixelRatio || 1);
+                
+                ctx.clearRect(0, 0, width, height);
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                
+                // 重置進度條
+                document.getElementById('replay-progress').style.width = '0%';
+                document.getElementById('play-icon').className = 'fas fa-pause';
+                
+                let strokeIndex = 0;
+                let pointIndex = 0;
+                
+                // 計算總點數用於進度條
+                let totalPoints = 0;
+                replayApp.strokes.forEach(s => totalPoints += s.points.length);
+                let currentPointsDrawn = 0;
+
+                const drawFrame = () => {
+                    // 根據速度，一次畫多個點
+                    let pointsToDraw = replayApp.speed; 
+                    if(replayApp.speed === 4) pointsToDraw = 5; // 加速優化
+                    
+                    for(let i=0; i<pointsToDraw; i++) {
+                        if (strokeIndex >= replayApp.strokes.length) {
+                            document.getElementById('play-icon').className = 'fas fa-redo';
+                            return; // 結束
+                        }
+
+                        const stroke = replayApp.strokes[strokeIndex];
+                        
+                        if (pointIndex === 0) {
+                            ctx.beginPath();
+                            ctx.strokeStyle = stroke.color;
+                            ctx.lineWidth = stroke.width * replayApp.scale; // 線條粗細也要跟著縮放
+                            
+                            // 轉換第一個點
+                            const startX = stroke.points[0].x * replayApp.scale + replayApp.offsetX;
+                            const startY = stroke.points[0].y * replayApp.scale + replayApp.offsetY;
+                            
+                            ctx.moveTo(startX, startY);
+                            pointIndex = 1;
+                        }
+
+                        if (pointIndex < stroke.points.length) {
+                            // 轉換下一個點
+                            const nextX = stroke.points[pointIndex].x * replayApp.scale + replayApp.offsetX;
+                            const nextY = stroke.points[pointIndex].y * replayApp.scale + replayApp.offsetY;
+                            
+                            ctx.lineTo(nextX, nextY);
+                            ctx.stroke();
+                            pointIndex++;
+                            currentPointsDrawn++;
+                        } else {
+                            ctx.closePath();
+                            strokeIndex++;
+                            pointIndex = 0;
+                            // 換筆時不 break，繼續畫下一筆以保持流暢
+                        }
+                    }
+
+                    // 更新進度條
+                    const percent = (currentPointsDrawn / totalPoints) * 100;
+                    document.getElementById('replay-progress').style.width = `${percent}%`;
+
+                    replayApp.rafId = requestAnimationFrame(drawFrame);
+                };
+
+                replayApp.rafId = requestAnimationFrame(drawFrame);
+            },
+            
+            setSpeed: (s) => {
+                replayApp.speed = s;
+                // 更新按鈕樣式
+                document.querySelectorAll('.speed-btn').forEach(btn => {
+                    if(parseInt(btn.dataset.speed) === s) {
+                        btn.classList.add('bg-gray-500');
+                        btn.classList.remove('hover:bg-gray-600');
+                    } else {
+                        btn.classList.remove('bg-gray-500');
+                        btn.classList.add('hover:bg-gray-600');
+                    }
+                });
+            }
+        };
+
+        // ================= 設定與說明功能 =================
+        const settingsModal = {
+            open: () => {
+                ui.show('modal-settings');
+                document.getElementById('setting-gas-url').value = state.gasUrl;
+            },
+            
+            toggleVisibility: () => {
+                const input = document.getElementById('setting-gas-url');
+                const icon = document.getElementById('setting-eye-icon');
+                if (input.type === "password") {
+                    input.type = "text";
+                    icon.className = "fas fa-eye-slash";
+                } else {
+                    input.type = "password";
+                    icon.className = "fas fa-eye";
+                }
+            },
+
+            save: () => {
+                const url = document.getElementById('setting-gas-url').value.trim();
+                if (url) {
+                    state.gasUrl = url;
+                    localStorage.setItem('GAS_URL', url);
+                    document.getElementById('connection-status').innerText = "✅ 已更新設定";
+                    document.getElementById('connection-status').className = "mt-4 text-sm text-green-500";
+                }
+            },
+
+            clear: () => {
+                localStorage.removeItem('GAS_URL');
+                state.gasUrl = '';
+                document.getElementById('setting-gas-url').value = '';
+                ui.closeModal('modal-settings');
+                ui.showModal("重置成功", "已清除所有設定，請重新整理頁面。", "info");
+                setTimeout(() => location.reload(), 1500);
+            },
+
+            generateShareLink: async () => {
+                if(!state.gasUrl) {
+                    ui.showModal("錯誤", "請先輸入並儲存 GAS URL", "error");
+                    return;
+                }
+                
+                ui.loading(true, "產生 QR Code 中...");
+                
+                // Base64 編碼
+                const encoded = btoa(state.gasUrl);
+                const longUrl = `${window.location.protocol}//${window.location.host}${window.location.pathname}?config=${encoded}`;
+                
+                // 使用 is.gd 縮網址 (因為它是免費且不需 API Key 的，前端可用)
+                // 注意：若遇到跨域問題，退回使用長網址
+                let finalUrl = longUrl;
+                
+                try {
+                    // 使用 QuickChart QR API
+                    const qrUrl = `https://quickchart.io/qr?text=${encodeURIComponent(finalUrl)}&size=200&margin=1`;
+                    
+                    document.getElementById('qrcode-container').innerHTML = `<img src="${qrUrl}" alt="QR Code">`;
+                    document.getElementById('share-link-input').value = finalUrl;
+                    
+                    ui.loading(false);
+                } catch (e) {
+                    console.error(e);
+                    ui.loading(false);
+                }
+            }
+        };
+
+        const helpModal = {
+            open: () => {
+                ui.show('modal-help');
+                // 這裡放入 Code.gs 的內容供複製
+                const codeContent = `// 請將此內容貼到 Google Apps Script (Code.gs)\n\nconst DB_CONFIG = {\n  sheetName: "學生畫布資料",\n  headers: ["時間戳記", "學生姓名", "圖片預覽(Base64)", "筆畫數據(JSON)"]\n};\n\nfunction doGet(e) {\n  if (!e || !e.parameter) {\n    return ContentService.createTextOutput(JSON.stringify({ status: "error", message: "請部署為 Web App 後測試" })).setMimeType(ContentService.MimeType.JSON);\n  }\n  const params = e.parameter;\n  const action = params.action;\n  return handleResponse(() => {\n    if (action === "init") return initSheet();\n    else if (action === "read") return readData();\n    else return { status: "error", message: "無效的動作" };\n  });\n}\n\nfunction doPost(e) {\n  if (!e || !e.postData) return ContentService.createTextOutput(JSON.stringify({ status: "error", message: "請部署為 Web App 後測試" }));\n  return handleResponse(() => {\n    const data = JSON.parse(e.postData.contents);\n    if (data.action === "submit") return saveSubmission(data);\n    if (data.action === "delete") return deleteSubmission(data);\n    if (data.action === "deleteAll") return deleteAllSubmissions();\n    return { status: "error", message: "無效的 POST 動作" };\n  });\n}\n\nfunction handleResponse(func) {\n  let result;\n  try { result = func(); } catch (err) { result = { status: "error", message: err.toString() }; }\n  return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);\n}\n\nfunction initSheet() {\n  const ss = SpreadsheetApp.getActiveSpreadsheet();\n  let sheet = ss.getSheetByName(DB_CONFIG.sheetName);\n  if (!sheet) sheet = ss.insertSheet(DB_CONFIG.sheetName);\n  const headers = sheet.getRange(1, 1, 1, DB_CONFIG.headers.length).getValues()[0];\n  if (headers[0] !== DB_CONFIG.headers[0]) {\n    sheet.getRange(1, 1, 1, DB_CONFIG.headers.length).setValues([DB_CONFIG.headers]);\n  }\n  return { status: "success", message: "初始化完成" };\n}\n\nfunction saveSubmission(data) {\n  initSheet();\n  const ss = SpreadsheetApp.getActiveSpreadsheet();\n  const sheet = ss.getSheetByName(DB_CONFIG.sheetName);\n  sheet.appendRow([new Date(), data.name, data.image, JSON.stringify(data.strokes)]);\n  return { status: "success", message: "作品已送出" };\n}\n\nfunction deleteSubmission(data) {\n  initSheet();\n  const ss = SpreadsheetApp.getActiveSpreadsheet();\n  const sheet = ss.getSheetByName(DB_CONFIG.sheetName);\n  const rows = sheet.getDataRange().getValues();\n  const targetTime = new Date(data.timestamp).getTime();\n  for (let i = rows.length - 1; i >= 1; i--) {\n    const cellTime = new Date(rows[i][0]).getTime();\n    if (Math.abs(cellTime - targetTime) < 2000) {\n       sheet.deleteRow(i + 1);\n       return { status: "success", message: "刪除成功" };\n    }\n  }\n  return { status: "error", message: "找不到該筆資料" };\n}\n\nfunction deleteAllSubmissions() {\n  initSheet();\n  const ss = SpreadsheetApp.getActiveSpreadsheet();\n  const sheet = ss.getSheetByName(DB_CONFIG.sheetName);\n  const lastRow = sheet.getLastRow();\n  if (lastRow > 1) sheet.deleteRows(2, lastRow - 1);\n  return { status: "success", message: "已清空所有作品" };\n}\n\nfunction readData() {\n  initSheet();\n  const ss = SpreadsheetApp.getActiveSpreadsheet();\n  const sheet = ss.getSheetByName(DB_CONFIG.sheetName);\n  const lastRow = sheet.getLastRow();\n  if (lastRow <= 1) return { status: "success", data: [] };\n  const values = sheet.getRange(2, 1, lastRow - 1, DB_CONFIG.headers.length).getValues();\n  const result = values.map(row => ({\n    timestamp: row[0],\n    name: row[1],\n    image: row[2],\n    strokes: JSON.parse(row[3] || "[]")\n  })).reverse();\n  return { status: "success", data: result };\n}`;
+                document.getElementById('gas-code-display').value = codeContent;
+            },
+            copyCode: () => {
+                const copyText = document.getElementById("gas-code-display");
+                copyText.select();
+                document.execCommand("copy"); // 兼容性較好的做法
+                ui.showModal("複製成功", "程式碼已複製到剪貼簿，請貼到 Script Editor", "success");
+            }
+        };
+
+        // 啟動應用程式
+        window.onload = app.init;
+
+    </script>
+</body>
+</html>
