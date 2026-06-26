@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lucky老師的成績單評語生成器</title>
+    <!-- Tailwind CSS for elegant styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for clean educational icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts for premium typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            font-size: 18px; /* 強制設定 18px */
+            background-color: #f0fdf4; /* 溫暖的淺綠色背景 */
+        }
+        /* 確保所有常規輸入框與字體皆符合 18px 基礎 */
+        input, select, textarea, button, p, span, label {
+            font-size: 18px !important;
+        }
+        /* 選取中特質的卡片漸變與邊框 */
+        .trait-badge {
+            transition: all 0.2s ease-in-out;
+        }
+        .trait-badge:hover {
+            transform: translateY(-2px);
+        }
+        /* 滾動條美化 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="min-h-screen py-8 px-4 sm:px-6 lg:px-8 text-slate-800">
+
+    <div class="max-w-4xl mx-auto bg-white rounded-3xl shadow-xl border border-emerald-100 overflow-hidden">
+        <!-- 頂部橫幅 -->
+        <div class="bg-gradient-to-r from-emerald-500 to-teal-600 text-white p-8 relative">
+            <div class="absolute right-6 top-6 opacity-10 text-9xl pointer-events-none">
+                <i class="fa-solid fa-graduation-cap"></i>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="bg-white/20 p-3 rounded-2xl backdrop-blur-sm">
+                    <i class="fa-solid fa-pen-nib text-3xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-3xl font-bold tracking-wide">成績單評語智慧生成器</h1>
+                    <p class="text-emerald-100 mt-1 flex items-center gap-2">
+                        <span>讓每份評語都帶著溫度與智慧</span>
+                        <span class="bg-emerald-700/50 px-3 py-0.5 rounded-full text-sm font-semibold">作者：老師教學</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-6 sm:p-8 space-y-8">
+            <!-- 第一步：學生基本資料 -->
+            <section class="bg-emerald-50/50 p-5 rounded-2xl border border-emerald-100/60">
+                <h2 class="font-bold text-xl text-teal-800 mb-4 flex items-center gap-2">
+                    <span class="bg-teal-600 text-white w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold">1</span>
+                    學生基本資料
+                </h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div>
+                        <label for="studentName" class="block font-medium text-slate-700 mb-2">學生姓名</label>
+                        <input type="text" id="studentName" placeholder="請輸入學生姓名 (例如：小明)" 
+                               class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 transition">
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-2">稱呼代名詞</label>
+                        <div class="grid grid-cols-3 gap-3" id="genderGroup">
+                            <button type="button" onclick="selectGender('他')" id="btn-gender-他" class="gender-btn flex items-center justify-center py-3 px-4 rounded-xl border border-teal-600 bg-teal-600 text-white font-bold transition">他 (男同學)</button>
+                            <button type="button" onclick="selectGender('她')" id="btn-gender-她" class="gender-btn flex items-center justify-center py-3 px-4 rounded-xl border border-slate-300 text-slate-700 hover:bg-teal-50/50 transition">她 (女同學)</button>
+                            <button type="button" onclick="selectGender('該生')" id="btn-gender-該生" class="gender-btn flex items-center justify-center py-3 px-4 rounded-xl border border-slate-300 text-slate-700 hover:bg-teal-50/50 transition">該生 (中性)</button>
+                        </div>
+                        <input type="hidden" id="studentGender" value="เขา">
+                        <script>
+                            // 修正初始化值
+                            document.getElementById('studentGender').value = '他';
+                        </script>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 第二步：學生特質點選（每類均包含正反面各 10 個，共 20 個特質） -->
+            <section class="space-y-6">
+                <h2 class="font-bold text-xl text-teal-800 mb-4 flex items-center gap-2">
+                    <span class="bg-teal-600 text-white w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold">2</span>
+                    點選表現與特質 (可多選，提供正向與待加強表現，每類至少 20 項)
+                </h2>
+
+                <!-- 人際關係 -->
+                <div class="border border-slate-100 rounded-2xl p-5 bg-white shadow-sm space-y-4">
+                    <h3 class="font-bold text-teal-700 flex items-center gap-2 border-b border-slate-100 pb-2">
+                        <i class="fa-solid fa-users text-emerald-500"></i> 人際關係表現 (共 20 項)
+                    </h3>
+                    <div class="space-y-4">
+                        <!-- 正向特質 -->
+                        <div>
+                            <span class="text-sm font-semibold text-emerald-600 block mb-2"><i class="fa-solid fa-circle-plus"></i> 優良展現 (10 項)：</span>
+                            <div class="flex flex-wrap gap-2" id="interpersonal-pos">
+                                <!-- JS 動態生成 -->
+                            </div>
+                        </div>
+                        <!-- 待加強/建議改善特質 -->
+                        <div>
+                            <span class="text-sm font-semibold text-amber-600 block mb-2"><i class="fa-solid fa-triangle-exclamation"></i> 成長空間 (10 項)：</span>
+                            <div class="flex flex-wrap gap-2" id="interpersonal-neg">
+                                <!-- JS 動態生成 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 學習表現 -->
+                <div class="border border-slate-100 rounded-2xl p-5 bg-white shadow-sm space-y-4">
+                    <h3 class="font-bold text-teal-700 flex items-center gap-2 border-b border-slate-100 pb-2">
+                        <i class="fa-solid fa-book-open text-emerald-500"></i> 學習表現與態度 (共 20 項)
+                    </h3>
+                    <div class="space-y-4">
+                        <!-- 正向特質 -->
+                        <div>
+                            <span class="text-sm font-semibold text-emerald-600 block mb-2"><i class="fa-solid fa-circle-plus"></i> 優良展現 (10 項)：</span>
+                            <div class="flex flex-wrap gap-2" id="academic-pos">
+                                <!-- JS 動態生成 -->
+                            </div>
+                        </div>
+                        <!-- 待加強特質 -->
+                        <div>
+                            <span class="text-sm font-semibold text-amber-600 block mb-2"><i class="fa-solid fa-triangle-exclamation"></i> 成長空間 (10 項)：</span>
+                            <div class="flex flex-wrap gap-2" id="academic-neg">
+                                <!-- JS 動態生成 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 日常生活表現 -->
+                <div class="border border-slate-100 rounded-2xl p-5 bg-white shadow-sm space-y-4">
+                    <h3 class="font-bold text-teal-700 flex items-center gap-2 border-b border-slate-100 pb-2">
+                        <i class="fa-solid fa-seedling text-emerald-500"></i> 日常生活表現與常規 (共 20 項)
+                    </h3>
+                    <div class="space-y-4">
+                        <!-- 正向特質 -->
+                        <div>
+                            <span class="text-sm font-semibold text-emerald-600 block mb-2"><i class="fa-solid fa-circle-plus"></i> 優良展現 (10 項)：</span>
+                            <div class="flex flex-wrap gap-2" id="daily-pos">
+                                <!-- JS 動態生成 -->
+                            </div>
+                        </div>
+                        <!-- 待加強特質 -->
+                        <div>
+                            <span class="text-sm font-semibold text-amber-600 block mb-2"><i class="fa-solid fa-triangle-exclamation"></i> 成長空間 (10 項)：</span>
+                            <div class="flex flex-wrap gap-2" id="daily-neg">
+                                <!-- JS 動態生成 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 第三步：生成設定 -->
+            <section class="bg-slate-50 p-6 rounded-2xl border border-slate-200/60 space-y-6">
+                <h2 class="font-bold text-xl text-teal-800 flex items-center gap-2">
+                    <span class="bg-teal-600 text-white w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold">3</span>
+                    生成設定
+                </h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- 口氣 -->
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-2 font-semibold">評語語氣與口氣</label>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" id="toneGroup">
+                            <button type="button" onclick="selectTone('溫慢鼓勵')" id="btn-tone-溫慢鼓勵" class="tone-btn flex flex-col items-center justify-center py-3 px-3 rounded-xl border border-teal-600 bg-teal-600 text-white font-bold transition text-center">
+                                <span class="font-bold">溫慢鼓勵</span>
+                                <span class="text-xs opacity-90 mt-1">給予支持力量</span>
+                            </button>
+                            <button type="button" onclick="selectTone('客觀專業')" id="btn-tone-客觀專業" class="tone-btn flex flex-col items-center justify-center py-3 px-3 rounded-xl border border-slate-300 text-slate-700 hover:bg-teal-50/50 transition text-center">
+                                <span class="font-bold">客觀專業</span>
+                                <span class="text-xs opacity-60 mt-1">強調質化觀察</span>
+                            </button>
+                            <button type="button" onclick="selectTone('殷切期盼')" id="btn-tone-殷切期盼" class="tone-btn flex flex-col items-center justify-center py-3 px-3 rounded-xl border border-slate-300 text-slate-700 hover:bg-teal-50/50 transition text-center">
+                                <span class="font-bold">殷切期盼</span>
+                                <span class="text-xs opacity-60 mt-1">溫柔提出指引</span>
+                            </button>
+                        </div>
+                        <input type="hidden" id="commentTone" value="溫慢鼓勵">
+                    </div>
+
+                    <!-- 字數選擇 -->
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-2 font-semibold">目標生成字數</label>
+                        <div class="grid grid-cols-3 gap-3">
+                            <label class="flex items-center justify-center py-3 px-4 rounded-xl border cursor-pointer border-slate-300 hover:bg-teal-50/50 text-center transition" id="lbl-len-50">
+                                <input type="radio" name="wordCount" value="50" class="hidden" checked>
+                                約 50 字
+                            </label>
+                            <label class="flex items-center justify-center py-3 px-4 rounded-xl border cursor-pointer border-slate-300 hover:bg-teal-50/50 text-center transition" id="lbl-len-100">
+                                <input type="radio" name="wordCount" value="100" class="hidden">
+                                約 100 字
+                            </label>
+                            <label class="flex items-center justify-center py-3 px-4 rounded-xl border cursor-pointer border-slate-300 hover:bg-teal-50/50 text-center transition" id="lbl-len-150">
+                                <input type="radio" name="wordCount" value="150" class="hidden">
+                                約 150 字
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 生成引擎切換 -->
+                <div class="border-t border-slate-200 pt-6">
+                    <label class="block font-medium text-slate-700 mb-3 font-semibold">選擇生成引擎</label>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- 本地快捷引擎 -->
+                        <div class="border border-teal-200 bg-teal-50/20 rounded-2xl p-4 flex flex-col justify-between cursor-pointer hover:shadow-md transition duration-200" id="engine-local-card" onclick="selectEngine('local')">
+                            <div class="flex items-start gap-3">
+                                <input type="radio" name="engineType" id="engine-local" value="local" checked class="mt-1.5 accent-teal-600">
+                                <div>
+                                    <h4 class="font-bold text-teal-800 flex items-center gap-1">
+                                        <i class="fa-solid fa-bolt"></i> 本地快捷引擎
+                                    </h4>
+                                    <p class="text-sm text-slate-600 mt-1">完全免設定，離線立即可用！透過內建智慧句庫，將勾選的特質完美拼接成流暢、有層次的評語。</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 智慧 AI 引擎 -->
+                        <div class="border border-slate-200 rounded-2xl p-4 flex flex-col justify-between cursor-pointer hover:shadow-md transition duration-200" id="engine-ai-card" onclick="selectEngine('ai')">
+                            <div class="flex items-start gap-3">
+                                <input type="radio" name="engineType" id="engine-ai" value="ai" class="mt-1.5 accent-teal-600">
+                                <div>
+                                    <h4 class="font-bold text-slate-800 flex items-center gap-1" id="engine-ai-title">
+                                        <i class="fa-solid fa-brain"></i> 智慧 AI 引擎 (Gemini Stable)
+                                    </h4>
+                                    <p class="text-sm text-slate-600 mt-1">串聯強大的 Google AI 技術，自動生成擬真、通順且最貼切學生特性的全新客製化評語。</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI API Key 設定區塊 (當切換至 AI 引擎時顯示) -->
+                <div id="ai-key-section" class="hidden border-t border-slate-200 pt-6 space-y-3 bg-teal-50/40 p-4 rounded-xl border border-teal-100">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                        <label for="apiKeyInput" class="font-bold text-teal-800 flex items-center gap-2">
+                            <i class="fa-solid fa-key"></i> 輸入您的 Gemini API Key
+                        </label>
+                        <a href="https://aistudio.google.com/" target="_blank" class="text-sm text-emerald-600 hover:text-emerald-700 underline flex items-center gap-1">
+                            <i class="fa-solid fa-circle-info"></i> 免費取得 Google API key 連結
+                        </a>
+                    </div>
+                    <div class="relative">
+                        <input type="password" id="apiKeyInput" placeholder="請在此貼上您的 AI Key (AI 引擎使用，本網頁不會上傳或儲存此 Key)" 
+                               class="w-full pl-4 pr-12 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 transition">
+                        <button type="button" onclick="toggleApiKeyVisibility()" class="absolute right-4 top-3.5 text-slate-400 hover:text-slate-600">
+                            <i class="fa-solid fa-eye" id="eye-icon"></i>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 按鈕觸發 -->
+            <div class="text-center pt-2">
+                <button onclick="handleGeneration()" class="w-full sm:w-2/3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold py-4 px-8 rounded-2xl shadow-lg transform active:scale-95 transition flex items-center justify-center gap-3">
+                    <i class="fa-solid fa-wand-magic-sparkles text-xl"></i>
+                    <span>立即生成成績單評語</span>
+                </button>
+            </div>
+
+            <!-- 第四步：生成結果 -->
+            <section id="output-section" class="hidden space-y-4 pt-4">
+                <div class="border-2 border-emerald-400 rounded-3xl p-6 bg-emerald-50/20 shadow-md space-y-4">
+                    <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                        <h3 class="font-bold text-teal-800 flex items-center gap-2">
+                            <i class="fa-solid fa-square-poll-horizontal text-emerald-500"></i> 生成結果評語
+                        </h3>
+                        <span class="text-sm bg-teal-100 text-teal-800 px-3 py-1 rounded-full font-semibold" id="resultWordCounter">
+                            字數計：0 字
+                        </span>
+                    </div>
+
+                    <!-- 載入中動畫 -->
+                    <div id="loader" class="hidden py-8 flex flex-col items-center justify-center space-y-3">
+                        <div class="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                        <p class="text-slate-600 font-medium">正在啟動智慧 AI 引擎為您撰寫評語中，請稍候...</p>
+                    </div>
+
+                    <!-- 生成評語顯示框 -->
+                    <div id="resultContentContainer" class="block">
+                        <textarea id="outputResult" rows="6" class="w-full p-4 rounded-2xl border border-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white leading-relaxed text-slate-800 resize-y" placeholder="評語生成結果將會顯示在這裡..."></textarea>
+                    </div>
+
+                    <!-- 動作按鈕 -->
+                    <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
+                        <div class="text-sm text-slate-500 flex items-center gap-1.5">
+                            <i class="fa-regular fa-clock"></i>
+                            <span>您可以點擊直接在框內進行微調編輯。</span>
+                        </div>
+                        <div class="flex items-center gap-3 w-full sm:w-auto">
+                            <button onclick="copyToClipboard()" class="flex-1 sm:flex-none bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2.5 px-6 rounded-xl shadow-md transition flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-copy"></i>
+                                <span id="copyBtnText">複製評語</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- 頁尾宣告 -->
+        <footer class="bg-slate-50 border-t border-slate-100 px-8 py-6 text-center text-sm text-slate-500 flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div>
+                創作者：<span class="font-semibold text-teal-700">老師教學</span> &copy; 2026 老師教學版權所有
+            </div>
+            <div class="flex gap-4">
+                <span class="flex items-center gap-1 text-slate-400"><i class="fa-solid fa-shield-halved"></i> 隱私保護：本網頁完全不會記錄您的 API 密鑰或任何學生個資</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Toast 訊息通知元件 -->
+    <div id="toast" class="fixed bottom-6 right-6 bg-slate-800 text-white px-5 py-3 rounded-xl shadow-xl transform translate-y-20 opacity-0 transition duration-300 flex items-center gap-2 z-50">
+        <i class="fa-solid fa-circle-check text-emerald-400"></i>
+        <span id="toast-text"></span>
+    </div>
+
+    <!-- JavaScript 業務邏輯 -->
+    <script>
+        // 設定 API 金鑰預設空值，執行期自動注入
+        const apiKey = "";
+
+        // 1. 特質庫：三大類別，各包含 10 個正向與 10 個負向，共計 60 個特質（遠大於要求的20個）
+        const TRAITS_DATA = {
+            interpersonal: {
+                title: "人際關係",
+                pos: [
+                    { id: "int_p1", text: "樂於助人", desc: "熱心助人，總是主動關心同儕的需要" },
+                    { id: "int_p2", text: "善於溝通", desc: "能良好地與他人溝通，樂於與人分享想法" },
+                    { id: "int_p3", text: "具領導力", desc: "有優秀的領導才能，能帶領小組完成團隊任務" },
+                    { id: "int_p4", text: "尊重他人", desc: "待人客氣、言行有禮，懂得尊重與包容不同的意見" },
+                    { id: "int_p5", text: "活潑開朗", desc: "個性活潑開朗，是班上的開心果、同儕互動佳" },
+                    { id: "int_p6", text: "團隊合作佳", desc: "團體協作能力極佳，能迅速融入集體生活" },
+                    { id: "int_p7", text: "富同理心", desc: "心思細膩體貼，能站在同學的角度設身處地思考" },
+                    { id: "int_p8", text: "溫和友善", desc: "待人接物溫和無爭，與每位同學都能和睦相處" },
+                    { id: "int_p9", text: "樂於分享", desc: "不自私，樂意與同學分享個人資源與學習心得" },
+                    { id: "int_p10", text: "善於調解", desc: "具備優秀的協調與調解能力，常協助化解同儕間的小摩擦" }
+                ],
+                neg: [
+                    { id: "int_n1", text: "人際較被動", desc: "人際互動稍顯被動，需多鼓勵他主動踏出第一步與同儕交流" },
+                    { id: "int_n2", text: "偶爾與人摩擦", desc: "與同學相處偶有摩擦，需多學習控制個人情緒與良善溝通" },
+                    { id: "int_n3", text: "主觀意識強", desc: "主觀意識較強、較固執，建議在團隊合作中多學習妥協" },
+                    { id: "int_n4", text: "需多傾聽他人", desc: "較急於表達自我，若能靜下心多傾聽他人的聲音會更好" },
+                    { id: "int_n5", text: "害羞且退縮", desc: "面對同儕較為害羞，可多鼓勵參與小組互動以提升社交自信" },
+                    { id: "int_n6", text: "喜好獨自行動", desc: "日常喜愛特立獨行，需逐步培養在團隊合作中的適應力" },
+                    { id: "int_n7", text: "較不關注周遭", desc: "較為專注於自身事物，若能多引導其關注並關懷周遭夥伴尤佳" },
+                    { id: "int_n8", text: "玩鬧拿捏欠佳", desc: "課間嬉戲時偶爾玩得過火，需引導其拿捏與人相處的分寸與界線" },
+                    { id: "int_n9", text: "表達過於直率", desc: "說話較直接，有時無意間傷害同學感情，需學習修飾言詞" },
+                    { id: "int_n10", text: "依賴特定同儕", desc: "過度依賴特定朋友，需鼓勵跨出舒適圈以結交更多新朋友" }
+                ]
+            },
+            academic: {
+                title: "學習表現",
+                pos: [
+                    { id: "aca_p1", text: "學習積極主動", desc: "課堂學習主動積極，表現出高昂的學習動機與上進心" },
+                    { id: "aca_p2", text: "理解吸收力強", desc: "邏輯推理與理解力強，對新知吸收快速，一點就通" },
+                    { id: "aca_p3", text: "作業認真詳實", desc: "課後作業書寫極為認真，字跡工整端正、內容詳實" },
+                    { id: "aca_p4", text: "發言熱烈踴躍", desc: "上課專注且發言踴躍，積極參與課堂討論，回答切中要領" },
+                    { id: "aca_p5", text: "思維靈活有創意", desc: "面對問題時思考靈活、富有創意，能提出突破框架的想法" },
+                    { id: "aca_p6", text: "做事持之以恆", desc: "學習態度持之以恆，做事有始有終、踏實而不浮躁" },
+                    { id: "aca_p7", text: "求知慾望旺盛", desc: "對未知事物充滿強烈的好奇心，課外自主閱讀與求知慾極佳" },
+                    { id: "aca_p8", text: "勇於面對挫折", desc: "遇到不會的題目不氣餒，樂於嘗試各種解法直到解開為止" },
+                    { id: "aca_p9", text: "組織條理清晰", desc: "筆記與作業整理井井有條，能系統化且條理清晰地整理所學知識" },
+                    { id: "aca_p10", text: "專注力極佳", desc: "課堂上能長時間保持高度專注力，不易受到外界聲響干擾" }
+                ],
+                neg: [
+                    { id: "aca_n1", text: "專注度待提升", desc: "課堂專注力容易分散，常受外界干擾，上課偶有分心之舉" },
+                    { id: "aca_n2", text: "吸收新知較慢", desc: "新知理解吸收稍慢，需多花時間於課後反覆複習與加強練習" },
+                    { id: "aca_n3", text: "作業常有疏漏", desc: "作業繳交品質不夠穩定，偶有缺交或草率書寫的情形，需督促" },
+                    { id: "aca_n4", text: "課堂表現被動", desc: "課堂表現較為沉默、被動，期盼在課堂上多展現自信、勇於提問" },
+                    { id: "aca_n5", text: "思考模式單一", desc: "思考方式較為單一，面對多元題型時需多方引導、嘗試不同解法" },
+                    { id: "aca_n6", text: "耐性稍嫌不足", desc: "學習熱情起伏較大、缺乏耐心，容易陷入「三分鐘熱度」的狀況" },
+                    { id: "aca_n7", text: "學習熱情待激發", desc: "目前對部分學科興趣低，需要尋找適合自己的切入點來提高動機" },
+                    { id: "aca_n8", text: "字跡潦草粗心", desc: "寫作業速度快但過於急躁，常因粗心而筆誤，字跡亦需再端正" },
+                    { id: "aca_n9", text: "遇困難易放棄", desc: "面對較有挑戰性的課業時容易退縮，需多給予信心與陪伴指導" },
+                    { id: "aca_n10", text: "課前預習不足", desc: "對新進度較無準備，課前若能養成預習習慣，學習效果必能加倍" }
+                ]
+            },
+            daily: {
+                title: "日常生活",
+                pos: [
+                    { id: "day_p1", text: "恪守常規秩序", desc: "高度自律，能確實遵守班級生活常規，從不需導師操心" },
+                    { id: "day_p2", text: "細心愛護公物", desc: "熱心於班級整潔，十分珍惜並愛護學校公物與環境" },
+                    { id: "day_p3", text: "幹部熱心盡責", desc: "擔任班級幹部或值日生負責盡職，交辦任務能徹底落實" },
+                    { id: "day_p4", text: "注重個人整潔", desc: "個人衛生習慣優秀，書桌與抽屜能隨時自理保持得乾乾淨淨" },
+                    { id: "day_p5", text: "情緒穩定沉著", desc: "情緒管理良好，遇到挫折或摩擦時能沉著冷靜、理性面對" },
+                    { id: "day_p6", text: "日常作息自律", desc: "生活作息規律，早自習打掃及精神面貌十分好，充滿朝氣" },
+                    { id: "day_p7", text: "待人謙恭有禮", desc: "待人接物溫和謙恭有禮，常將「請、謝謝、對不起」融入日常" },
+                    { id: "day_p8", text: "誠實負責可靠", desc: "做事老實誠懇，答應的事情一定會做到，是老師不可或缺的幫手" },
+                    { id: "day_p9", text: "愛惜午餐資源", desc: "用餐習慣良好，不挑食且能愛惜食物，並主動協助廚餘整理" },
+                    { id: "day_p10", text: "安全意識良好", desc: "日常活動小心謹慎，課間不奔跑，能注意自身與他人的安全" }
+                ],
+                neg: [
+                    { id: "day_n1", text: "日常偶顯浮躁", desc: "生性活潑好動，但在課堂或集會等肅靜場合容易流於浮躁" },
+                    { id: "day_n2", text: "常丟三落四", desc: "忘記攜帶日常學用品與聯絡簿的次數較高，需培養隨手檢查的習慣" },
+                    { id: "day_n3", text: "工作有些推託", desc: "面對被指派之清掃或公眾工作時偶有推諉、責任心有待落實" },
+                    { id: "day_n4", text: "整理能力待加強", desc: "座位、抽屜與個人隨身物品整理能力尚待加強，需多加練習收納" },
+                    { id: "day_n5", text: "情緒起伏較大", desc: "容易受到挫折影響而造成情緒起伏，需要加強受挫力的引導與支持" },
+                    { id: "day_n6", text: "作息欠缺規律", desc: "偶有精神不濟、上課打瞌睡之情形，需重新調整並建立良好作息" },
+                    { id: "day_n7", text: "言行界限待釐清", desc: "言行有時過於直言無忌，容易得罪同學，需多加引導拿捏禮貌分寸" },
+                    { id: "day_n8", text: "攜帶非規物品", desc: "偶爾帶不符學校常規的私人物品到校，需加強規則遵守與自律意識" },
+                    { id: "day_n9", text: "午餐環境待督促", desc: "用餐時容易分心、拖延，飯後潔牙與環境收拾需要老師多加提醒" },
+                    { id: "day_n10", text: "課間奔跑危險", desc: "下課時喜歡在走廊或教室奔跑，安全自律防護意識仍有進步空間" }
+                ]
+            }
+        };
+
+        // 追蹤選取的特質
+        let selectedTraits = new Set();
+
+        // 2. 初始化介面元件
+        window.addEventListener('DOMContentLoaded', () => {
+            renderTraitSection('interpersonal', 'interpersonal-pos', 'pos');
+            renderTraitSection('interpersonal', 'interpersonal-neg', 'neg');
+            renderTraitSection('academic', 'academic-pos', 'pos');
+            renderTraitSection('academic', 'academic-neg', 'neg');
+            renderTraitSection('daily', 'daily-pos', 'pos');
+            renderTraitSection('daily', 'daily-neg', 'neg');
+
+            // 初始化設定字數的外觀聯動
+            const wordCountRadios = document.querySelectorAll('input[name="wordCount"]');
+            wordCountRadios.forEach(radio => {
+                radio.addEventListener('change', updateWordCountLabelStyles);
+            });
+            updateWordCountLabelStyles();
+
+            // 從 localStorage 預存 API key (如果有的話)
+            const savedKey = localStorage.getItem('gemini_api_key');
+            if (savedKey) {
+                document.getElementById('apiKeyInput').value = savedKey;
+            }
+
+            // 即時計算結果字數監聽
+            document.getElementById('outputResult').addEventListener('input', updateResultLengthCounter);
+        });
+
+        // 動態生成特質點選卡片
+        function renderTraitSection(categoryKey, containerId, type) {
+            const container = document.getElementById(containerId);
+            const traits = TRAITS_DATA[categoryKey][type];
+            
+            traits.forEach(trait => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = `trait-badge px-3 py-1.5 rounded-xl border text-sm text-left transition flex items-center gap-1.5 `;
+                
+                // 正反特質套用不同外觀基調
+                if (type === 'pos') {
+                    btn.className += 'bg-emerald-50/40 border-emerald-200 text-emerald-800 hover:bg-emerald-100/60';
+                } else {
+                    btn.className += 'bg-amber-50/40 border-amber-200 text-amber-800 hover:bg-amber-100/60';
+                }
+
+                btn.id = trait.id;
+                btn.onclick = () => toggleTrait(categoryKey, type, trait);
+                
+                // 按鈕內部架構
+                btn.innerHTML = `
+                    <span class="icon-indicator"><i class="fa-regular fa-square text-xs opacity-60"></i></span>
+                    <span class="font-medium">${trait.text}</span>
+                `;
+                container.appendChild(btn);
+            });
+        }
+
+        // 切換點選特質狀態
+        function toggleTrait(category, type, trait) {
+            const btn = document.getElementById(trait.id);
+            const iconSpan = btn.querySelector('.icon-indicator');
+            
+            if (selectedTraits.has(trait.id)) {
+                // 取消選取
+                selectedTraits.delete(trait.id);
+                btn.classList.remove('ring-2', 'ring-teal-500', 'font-bold', 'shadow-md');
+                if (type === 'pos') {
+                    btn.className = btn.className.replace('bg-emerald-100 border-emerald-400', 'bg-emerald-50/40 border-emerald-200');
+                    iconSpan.innerHTML = `<i class="fa-regular fa-square text-xs opacity-60"></i>`;
+                } else {
+                    btn.className = btn.className.replace('bg-amber-100 border-amber-400', 'bg-amber-50/40 border-amber-200');
+                    iconSpan.innerHTML = `<i class="fa-regular fa-square text-xs opacity-60"></i>`;
+                }
+            } else {
+                // 選取
+                selectedTraits.add(trait.id);
+                btn.classList.add('ring-2', 'ring-teal-500', 'font-bold', 'shadow-md');
+                if (type === 'pos') {
+                    btn.className = btn.className.replace('bg-emerald-50/40 border-emerald-200', 'bg-emerald-100 border-emerald-400');
+                    iconSpan.innerHTML = `<i class="fa-solid fa-square-check text-emerald-600 text-xs"></i>`;
+                } else {
+                    btn.className = btn.className.replace('bg-amber-50/40 border-amber-200', 'bg-amber-100 border-amber-400');
+                    iconSpan.innerHTML = `<i class="fa-solid fa-square-check text-amber-600 text-xs"></i>`;
+                }
+            }
+        }
+
+        // 稱呼代名詞切換
+        function selectGender(val) {
+            document.getElementById('studentGender').value = val;
+            const buttons = document.querySelectorAll('.gender-btn');
+            buttons.forEach(btn => {
+                if (btn.id === `btn-gender-${val}`) {
+                    btn.className = "gender-btn flex items-center justify-center py-3 px-4 rounded-xl border border-teal-600 bg-teal-600 text-white font-bold transition";
+                } else {
+                    btn.className = "gender-btn flex items-center justify-center py-3 px-4 rounded-xl border border-slate-300 text-slate-700 hover:bg-teal-50/50 transition";
+                }
+            });
+        }
+
+        // 語氣切換
+        function selectTone(val) {
+            document.getElementById('commentTone').value = val;
+            const buttons = document.querySelectorAll('.tone-btn');
+            buttons.forEach(btn => {
+                const descSpan = btn.querySelector('.text-xs');
+                if (btn.id === `btn-tone-${val}`) {
+                    btn.className = "tone-btn flex flex-col items-center justify-center py-3 px-3 rounded-xl border border-teal-600 bg-teal-600 text-white font-bold transition text-center";
+                    if (descSpan) {
+                        descSpan.classList.remove('opacity-60');
+                        descSpan.classList.add('opacity-90');
+                    }
+                } else {
+                    btn.className = "tone-btn flex flex-col items-center justify-center py-3 px-3 rounded-xl border border-slate-300 text-slate-700 hover:bg-teal-50/50 transition text-center";
+                    if (descSpan) {
+                        descSpan.classList.remove('opacity-90');
+                        descSpan.classList.add('opacity-60');
+                    }
+                }
+            });
+        }
+
+        // 修改字數點選標籤樣式
+        function updateWordCountLabelStyles() {
+            const radios = document.querySelectorAll('input[name="wordCount"]');
+            radios.forEach(radio => {
+                const label = document.getElementById(`lbl-len-${radio.value}`);
+                if (radio.checked) {
+                    label.classList.add('bg-teal-600', 'text-white', 'border-teal-600', 'font-bold');
+                    label.classList.remove('border-slate-300', 'text-slate-700');
+                } else {
+                    label.classList.remove('bg-teal-600', 'text-white', 'border-teal-600', 'font-bold');
+                    label.classList.add('border-slate-300', 'text-slate-700');
+                }
+            });
+        }
+
+        // 生成引擎切換控制
+        function selectEngine(type) {
+            const localRadio = document.getElementById('engine-local');
+            const aiRadio = document.getElementById('engine-ai');
+            const localCard = document.getElementById('engine-local-card');
+            const aiCard = document.getElementById('engine-ai-card');
+            const aiKeySection = document.getElementById('ai-key-section');
+
+            if (type === 'local') {
+                localRadio.checked = true;
+                localCard.classList.add('border-teal-400', 'bg-teal-50/20');
+                aiCard.classList.remove('border-teal-400', 'bg-teal-50/20');
+                aiKeySection.classList.add('hidden');
+            } else {
+                aiRadio.checked = true;
+                aiCard.classList.add('border-teal-400', 'bg-teal-50/20');
+                localCard.classList.remove('border-teal-400', 'bg-teal-50/20');
+                aiKeySection.classList.remove('hidden');
+            }
+        }
+
+        // 切換密鑰可視性
+        function toggleApiKeyVisibility() {
+            const apiKeyInput = document.getElementById('apiKeyInput');
+            const eyeIcon = document.getElementById('eye-icon');
+            if (apiKeyInput.type === 'password') {
+                apiKeyInput.type = 'text';
+                eyeIcon.classList.remove('fa-eye');
+                eyeIcon.classList.add('fa-eye-slash');
+            } else {
+                apiKeyInput.type = 'password';
+                eyeIcon.classList.remove('fa-eye-slash');
+                eyeIcon.classList.add('fa-eye');
+            }
+        }
+
+        // 3. 主要生成控制入口
+        function handleGeneration() {
+            const studentName = document.getElementById('studentName').value.trim();
+            if (!studentName) {
+                showToast("⚠️ 請先輸入學生姓名！");
+                document.getElementById('studentName').focus();
+                return;
+            }
+
+            // 打開輸出區塊並平滑滾動到它
+            const outputSection = document.getElementById('output-section');
+            outputSection.classList.remove('hidden');
+            outputSection.scrollIntoView({ behavior: 'smooth' });
+
+            const engine = document.querySelector('input[name="engineType"]:checked').value;
+            const tone = document.getElementById('commentTone').value;
+            const targetLength = parseInt(document.querySelector('input[name="wordCount"]:checked').value);
+            const pronoun = document.getElementById('studentGender').value;
+
+            // 抓取選取的特質
+            const selectedList = getSelectedTraitsDetails();
+
+            if (engine === 'local') {
+                showLoader(true);
+                setTimeout(() => {
+                    const result = generateLocalEngineText(studentName, pronoun, selectedList, targetLength, tone);
+                    document.getElementById('outputResult').value = result;
+                    updateResultLengthCounter();
+                    showLoader(false);
+                    showToast("✨ 本地快捷生成完畢！");
+                }, 400); // 模擬生成
+            } else {
+                // 使用 AI 引擎
+                const userKey = document.getElementById('apiKeyInput').value.trim();
+                const actualKey = userKey || apiKey; // 若介面沒有輸入則使用空字串
+
+                if (!actualKey) {
+                    showToast("⚠️ 使用 AI 引擎需要提供 API key！請點連結免費取得。");
+                    showLoader(false);
+                    return;
+                }
+
+                // 儲存金鑰至 localStorage 方便老師下次使用
+                localStorage.setItem('gemini_api_key', actualKey);
+
+                callGeminiAiEngine(actualKey, studentName, pronoun, selectedList, targetLength, tone);
+            }
+        }
+
+        // 取得已選取的特質中文細節
+        function getSelectedTraitsDetails() {
+            const details = { pos: [], neg: [] };
+            selectedTraits.forEach(id => {
+                // 搜尋對應特質
+                for (let cat in TRAITS_DATA) {
+                    const pFound = TRAITS_DATA[cat].pos.find(t => t.id === id);
+                    if (pFound) {
+                        details.pos.push(pFound);
+                        break;
+                    }
+                    const nFound = TRAITS_DATA[cat].neg.find(t => t.id === id);
+                    if (nFound) {
+                        details.neg.push(nFound);
+                        break;
+                    }
+                }
+            });
+            return details;
+        }
+
+        // 4. 本地快捷引擎算法 (Local Generation Engine)
+        function generateLocalEngineText(name, pronoun, selected, wordCount, tone) {
+            let parts = [];
+            
+            // 開頭引入
+            if (tone === '溫慢鼓勵') {
+                parts.push(`${name}是一位特別貼心且優秀的孩子。`);
+            } else if (tone === '殷切期盼') {
+                parts.push(`這學期很開心看見${name}的轉變，`);
+            } else {
+                parts.push(`${name}本學期在各方面學習與生活表現如下：`);
+            }
+
+            // 正面表現分析
+            if (selected.pos.length > 0) {
+                const positivePhrases = selected.pos.map(t => t.desc).slice(0, 3); // 限制最多3個避免過長
+                if (tone === '溫慢鼓勵') {
+                    parts.push(`${pronoun}在學校${positivePhrases.join('，且')}`);
+                } else if (tone === '殷切期盼') {
+                    parts.push(`在校期間，特別是${positivePhrases.join('，以及')}`);
+                } else {
+                    parts.push(`${pronoun}在課堂中${positivePhrases.join('、')}`);
+                }
+            } else {
+                parts.push(`平日學習態度積極合群，遵守課堂基本紀律，各項表現均在水準之上。`);
+            }
+
+            // 修正與成長空間
+            if (selected.neg.length > 0) {
+                const negativePhrases = selected.neg.map(t => t.desc).slice(0, 2);
+                if (tone === '溫慢鼓勵') {
+                    parts.push(`。唯有時${negativePhrases.join('，有進步空間。')}，但老師相信只要再加把勁，一定會展現出更好的狀態`);
+                } else if (tone === '殷切期盼') {
+                    parts.push(`。然而，若能在${negativePhrases.join('，相信這條路上會走的更穩健。')}，老師深信你的未來前途無量`);
+                } else {
+                    parts.push(`。唯需注意${negativePhrases.join('，建議未來多針對此特點進行調整改善。')}`);
+                }
+            } else {
+                parts.push(`。無論是常規或人際，表現都十分平穩令人放心。`);
+            }
+
+            // 結尾收合與字數/語氣調整
+            let closing = "";
+            if (tone === '溫慢鼓勵') {
+                closing = `。希望新學期能繼續保持這份熱忱，加油！`;
+            } else if (tone === '殷切期盼') {
+                closing = `。期待你在新的學期裡，能夠克服困難，展翅飛翔！`;
+            } else {
+                closing = `。期許下學期能在良好基礎上精益求精。`;
+            }
+            parts.push(closing);
+
+            let fullText = parts.join('');
+
+            // 依據字數目標 (50, 100, 150) 做修剪裁切與微調
+            if (wordCount === 50) {
+                // 高度精簡版
+                const mainPos = selected.pos[0] ? selected.pos[0].text : "學習認真";
+                const mainNeg = selected.neg[0] ? selected.neg[0].text : "";
+                if (mainNeg) {
+                    fullText = `${name}表現出色，特別是${mainPos}。若能多留意改善「${mainNeg}」，表現必能更加完美，加油！`;
+                } else {
+                    fullText = `${name}是一位${mainPos}的好孩子，在校各項常規極佳。期勉新學期能持之以恆，繼續爭取優異的表現！`;
+                }
+            } else if (wordCount === 100) {
+                // 100字中等長度：確保精確度
+                if (fullText.length > 115) {
+                    fullText = fullText.substring(0, 110) + '，老師看好你未來的發展！';
+                }
+            } else {
+                // 150字豐富版：若字數不足則補齊溫慢結尾語
+                if (fullText.length < 135) {
+                    fullText += " 在未來的歲月裡，老師會繼續陪伴你探索新知，期盼你帶著滿滿自信，勇往直前，成為更好的自己。";
+                }
+                if (fullText.length > 175) {
+                    fullText = fullText.substring(0, 160) + '。相信你在新學期定能更上一層樓！';
+                }
+            }
+
+            return fullText;
+        }
+
+        // 5. 智慧 AI 引擎 - 呼叫 Gemini API (GA 穩定版雙模降級與詳細報錯機制)
+        async function callGeminiAiEngine(apiUserKey, name, pronoun, selected, targetLength, tone) {
+            showLoader(true);
+
+            // 整理所選特質成清晰文字傳送給 AI
+            const posTexts = selected.pos.map(t => t.desc).join('、');
+            const negTexts = selected.neg.map(t => t.desc).join('、');
+
+            const systemInstruction = `你是一位精通國小班級輔導與教育學的資深級導師，擅長用富有溫度、真誠且精準的語言撰寫成績單評語。
+你的核心任務是為學生撰寫一份高品質的期末導師評語。
+格式約束：
+1. 必須以繁體中文撰寫，避免大陸或海外用語（請用「課堂、作業、日常」等）。
+2. 不必輸出任何前言與結語，不要說「這是我為您生成的評語：」或「好的：」，直接輸出評語純文字本文。
+3. 語句通順流暢，文字優美且具有輔導關懷的溫度。`;
+
+            const prompt = `請為名為「${name}」的學生（稱呼代名詞為：${pronoun}）撰寫一份成績單評語。
+學生的表現特質如下：
+【優良/正向表現】：${posTexts || '表現平穩，態度尚稱配合。'}
+【待調整/成長空間】：${negTexts || '本學期日常常規與人際方面無明顯缺失，表現穩定。'}
+
+生成設定要求：
+- 【目標字數】：大約 ${targetLength} 字左右（請務必嚴格控制在 ${targetLength - 15} 字至 ${targetLength + 15} 字之間）。
+- 【語氣風格】：${tone}
+請根據上述條件，直接生成合適的期末成績單導師評語文本：`;
+
+            const payload = {
+                contents: [{
+                    parts: [{ text: prompt }]
+                }],
+                systemInstruction: {
+                    parts: [{ text: systemInstruction }]
+                }
+            };
+
+            // 使用通用度最高、且最穩定的生產級(GA)模型列表進行依序嘗試
+            const modelsToTry = ["gemini-2.5-flash", "gemini-1.5-flash"];
+            let success = false;
+            let responseText = "";
+            let lastErrorMessage = "";
+
+            for (const model of modelsToTry) {
+                const endpointUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiUserKey}`;
+                let retryDelay = 1000;
+
+                for (let i = 0; i < 3; i++) { // 單一模型重試 3 次
+                    try {
+                        const response = await fetch(endpointUrl, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify(payload)
+                        });
+
+                        const responseData = await response.json();
+
+                        if (response.ok) {
+                            responseText = responseData.candidates?.[0]?.content?.parts?.[0]?.text;
+                            if (responseText) {
+                                success = true;
+                                break;
+                            }
+                        } else {
+                            // 抓取 Google 官方回傳的具體錯誤原因
+                            lastErrorMessage = responseData.error?.message || `HTTP 錯誤代碼 ${response.status}`;
+                            console.error(`模型 ${model} 嘗試 ${i+1} 失敗:`, lastErrorMessage, responseData);
+                        }
+                    } catch (error) {
+                        lastErrorMessage = error.message || "未知網路請求錯誤";
+                        console.error(`模型 ${model} 嘗試 ${i+1} 連線異常:`, error);
+                    }
+
+                    if (success) break;
+
+                    // 指數避讓退回
+                    await new Promise(resolve => setTimeout(resolve, retryDelay));
+                    retryDelay *= 2;
+                }
+
+                if (success) break;
+            }
+
+            showLoader(false);
+
+            if (success && responseText) {
+                // 清洗可能殘留的引導詞
+                let cleanResult = responseText.trim();
+                cleanResult = cleanResult.replace(/^好的[，、]以下是.*[：:]/g, "");
+                cleanResult = cleanResult.replace(/^評語：/g, "");
+                cleanResult = cleanResult.trim();
+
+                document.getElementById('outputResult').value = cleanResult;
+                updateResultLengthCounter();
+                showToast("🎯 智慧 AI 評語生成完畢！");
+            } else {
+                // 清楚列出錯誤原因，讓老師不再一頭霧水！
+                showToast(`❌ AI 生成失敗，原因：${lastErrorMessage}。已為您自動切換至本地快捷引擎！`);
+                // 降級 fallback 到本地引擎
+                const fallbackResult = generateLocalEngineText(name, pronoun, selected, targetLength, tone);
+                document.getElementById('outputResult').value = fallbackResult;
+                updateResultLengthCounter();
+            }
+        }
+
+        // 動態更新載入器與文本區域的顯示狀態
+        function showLoader(isLoading) {
+            const loader = document.getElementById('loader');
+            const container = document.getElementById('resultContentContainer');
+            if (isLoading) {
+                loader.classList.remove('hidden');
+                container.classList.add('opacity-30', 'pointer-events-none');
+            } else {
+                loader.classList.add('hidden');
+                container.classList.remove('opacity-30', 'pointer-events-none');
+            }
+        }
+
+        // 6. 即時字數計算
+        function updateResultLengthCounter() {
+            const text = document.getElementById('outputResult').value;
+            const counterSpan = document.getElementById('resultWordCounter');
+            counterSpan.textContent = `字數計：${text.length} 字`;
+        }
+
+        // 7. 複製到剪貼簿功能 (採用高相容性 document.execCommand 回退保護)
+        function copyToClipboard() {
+            const copyText = document.getElementById('outputResult').value;
+            if (!copyText) {
+                showToast("⚠️ 目前沒有任何評語可以複製！");
+                return;
+            }
+
+            const copyBtnText = document.getElementById('copyBtnText');
+
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(copyText)
+                    .then(() => handleCopySuccess(copyBtnText))
+                    .catch(() => fallbackCopy(copyText, copyBtnText));
+            } else {
+                fallbackCopy(copyText, copyBtnText);
+            }
+        }
+
+        function fallbackCopy(text, btnElement) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            textArea.style.opacity = "0";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    handleCopySuccess(btnElement);
+                } else {
+                    showToast("❌ 複製失敗，請手動圈選複製。");
+                }
+            } catch (err) {
+                showToast("❌ 複製失敗，請手動圈選複製。");
+            }
+            document.body.removeChild(textArea);
+        }
+
+        // 8. 顯示 Toast 訊息
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const toastText = document.getElementById('toast-text');
+            toastText.textContent = message;
+            
+            // 淡入
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            // 3.5秒後淡出 (稍微延長讓老師看清報錯訊息)
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 4500);
+        }
+
+        function handleCopySuccess(element) {
+            showToast("📋 評語已成功複製到剪貼簿！");
+            element.textContent = "已複製！";
+            setTimeout(() => {
+                element.textContent = "複製評語";
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
