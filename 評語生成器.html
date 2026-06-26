@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>成績單評語生成器 - lucky老師</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 嚴格落實字體設為 18 pixel */
+        body, input, textarea, button, select {
+            font-size: 18px !important;
+        }
+        /* 美化滾動條 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-indigo-50 via-slate-50 to-emerald-50 min-h-screen text-slate-800 antialiased flex flex-col justify-between">
+
+    <!-- 主容器 -->
+    <div class="container mx-auto px-4 py-8 max-w-7xl flex-grow">
+        <!-- 頁首標題 -->
+        <header class="text-center mb-10">
+            <div class="inline-block bg-emerald-100 text-emerald-800 px-4 py-1.5 rounded-full font-semibold tracking-wider mb-3 shadow-sm">
+                🎒 國小班級經營必備神器
+            </div>
+            <h1 class="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight mb-2">
+                成績單評語生成器
+            </h1>
+            <p class="text-slate-600">
+                設計作者：<span class="font-semibold text-emerald-600">lucky老師</span>
+            </p>
+        </header>
+
+        <!-- 主要互動區 -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <!-- 左側：輸入與特質挑選區 (7格) -->
+            <div class="lg:col-span-7 space-y-6">
+                
+                <!-- 學生基本資訊 -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+                    <h2 class="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                        <span class="w-2.5 h-6 bg-emerald-500 rounded-full inline-block"></span>
+                        第一步：學生基本資料
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-600 mb-1">學生姓名</label>
+                            <input type="text" id="studentName" value="小明" placeholder="例如：小明" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-600 mb-1">代稱稱謂</label>
+                            <div class="flex gap-4 mt-2">
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="radio" name="pronoun" value="他" checked class="w-5 h-5 text-emerald-600 focus:ring-emerald-500 border-gray-300">
+                                    <span class="ml-2">他</span>
+                                </label>
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="radio" name="pronoun" value="她" class="w-5 h-5 text-emerald-600 focus:ring-emerald-500 border-gray-300">
+                                    <span class="ml-2">她</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 評語特質點選（共 60 個項目，每類 10 正 10 反） -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 space-y-6">
+                    <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                        <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                            <span class="w-2.5 h-6 bg-emerald-500 rounded-full inline-block"></span>
+                            第二步：勾選表現特質 (可複選，每類均有 20 個指標)
+                        </h2>
+                        <button onclick="clearAllTags()" class="text-sm text-slate-400 hover:text-rose-500 transition-colors flex items-center gap-1">
+                            🧹 清空選擇
+                        </button>
+                    </div>
+
+                    <!-- 人際關係 -->
+                    <div class="space-y-4">
+                        <h3 class="font-bold text-slate-800 flex items-center gap-2 border-l-4 border-indigo-500 pl-2">
+                            🤝 人際關係表現 (共20項)
+                        </h3>
+                        <!-- 正面特質 -->
+                        <div>
+                            <div class="text-xs font-semibold text-emerald-700 bg-emerald-50 inline-block px-2 py-0.5 rounded mb-2">正面肯定</div>
+                            <div class="flex flex-wrap gap-2">
+                                <button onclick="toggleTag(this)" data-type="interpersonal" data-positive="true" data-text="熱心助人，總是主動關懷身邊的同學" class="tag-btn bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">樂於助人</button>
+                                <button onclick="toggleTag(this)" data-type="interpersonal" data-positive="true" data-text="具備良好的領導能力，能帶領小組完成各項任務" class="tag-btn bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">具領導力</button>
+                                <button onclick="toggleTag(this)" data-type="interpersonal" data-positive="true" data-text="溝通能力佳，能用理性的方式與同學交流" class="tag-btn bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">善於溝通</button>
+                                <button onclick="toggleTag(this)" data-type="interpersonal" data-positive="true" data-text="待人謙虛有禮，深得老師與同學的喜愛" class="tag-btn bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">謙遜有禮</button>
+                                <button onclick="toggleTag(this)" data-type="interpersonal" data-positive="true" data-text="在團體活動中配合度高，是團隊中不可或缺的成員" class="tag-btn bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">團隊合作佳</button>
+                                <button onclick="toggleTag(this)" data-type="interpersonal" data-positive="true" data-text="個性幽默開朗，常以積極樂觀的態度感染身邊同學" class="tag-btn bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">幽默風趣</button>
+                                <button onclick="toggleTag(this)" data-type="interpersonal" data-positive="true" data-text="懂得設身處地為他人著想，展現出極佳的包容心與同理心" class="tag-btn bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">體貼包容</button>
+                                <button onclick="toggleTag(this)" data-type="interpersonal" data-positive="true" data-text="樂於與同學分享資源，並能在學業上攜手並進、互相協助" class="tag-btn bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">不吝分享</button>
+                                <button onclick="toggleTag(this)" data-type="interpersonal" data-positive="true" data-text="對師長恭敬有禮，對同儕友善真誠，極具人緣" class="tag-btn bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">尊師重道</button>
+                                <button onclick="toggleTag(this)" data-type="interpersonal" data-positive="true" data-text="主動接納新同學並給予關懷，展現出高度的親和力" class="tag-btn bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">具親和力</button>
+                            </div>
+                        </div>
+                        <!-- 改進期許 -->
+                        <div>
+                            <div class="text-xs font-semibold text-amber-700 bg-amber-50 inline-block px-2 py-0.5 rounded mb-2">建議期許</div>
+                            <div class="flex flex-wrap gap-2">
+                                <button onclick="toggleTag(this)" data-type="interpersonal" data-positive="false" data-text="在人際交往上較為被動，若能多主動與人交流會更好" class="tag-btn bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">較為被動</button>
+                                <button onclick="toggleTag(this)" data-type="interpersonal" data-positive="false" data-text="有時較堅持自己的想法，建議多聽取他人的意見" class="tag-btn bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">稍顯固執</button>
+                                <button onclick="toggleTag(this)" data-type="interpersonal" data-positive="false" data-text="在與同學溝通時，若能多一分傾聽，人際關係會更和諧" class="tag-btn bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">需多傾聽</button>
+                                <button onclick="toggleTag(this)" data-type="interpersonal" data-positive="false" data-text="與同學相處偶有小摩擦，需學習控制情緒、理性溝通" class="tag-btn bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">偶有爭執</button>
+                                <button onclick="toggleTag(this)" data-type="interpersonal" data-positive="false" data-text="性格內向害羞，期待能多展現自己，融入班級群體" class="tag-btn bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">內向害羞</button>
+                                <button onclick="toggleTag(this)" data-type="interpersonal" data-positive="false" data-text="同儕相處時易受旁人影響，期盼能培養獨立思考與明辨是非的能力" class="tag-btn bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">易受影響</button>
+                                <button onclick="toggleTag(this)" data-type="interpersonal" data-positive="false" data-text="與同學嬉戲時有時分寸拿捏不當，需注意人際往來的合適界線" class="tag-btn bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">嬉鬧過度</button>
+                                <button onclick="toggleTag(this)" data-type="interpersonal" data-positive="false" data-text="人際圈過於依賴特定同伴，宜擴大社交範圍，多與不同的同學互動" class="tag-btn bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">依賴特定同伴</button>
+                                <button onclick="toggleTag(this)" data-type="interpersonal" data-positive="false" data-text="有時思考較偏向個人本位，若能更設身處地體諒他人，相處會更融洽" class="tag-btn bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">本位思考</button>
+                                <button onclick="toggleTag(this)" data-type="interpersonal" data-positive="false" data-text="遇到同儕爭論時易退縮逃避，鼓勵多練習用溫和理性的方式表達感受" class="tag-btn bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">爭執易退縮</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="border-slate-100">
+
+                    <!-- 學習表現 -->
+                    <div class="space-y-4">
+                        <h3 class="font-bold text-slate-800 flex items-center gap-2 border-l-4 border-emerald-500 pl-2">
+                            📖 學習表現情況 (共20項)
+                        </h3>
+                        <!-- 正面特質 -->
+                        <div>
+                            <div class="text-xs font-semibold text-emerald-700 bg-emerald-50 inline-block px-2 py-0.5 rounded mb-2">正面肯定</div>
+                            <div class="flex flex-wrap gap-2">
+                                <button onclick="toggleTag(this)" data-type="learning" data-positive="true" data-text="資質聰穎，對於課堂知識的理解力極強" class="tag-btn bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">理解力強</button>
+                                <button onclick="toggleTag(this)" data-type="learning" data-positive="true" data-text="學習態度積極主動，總是求知若渴" class="tag-btn bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">學習主動</button>
+                                <button onclick="toggleTag(this)" data-type="learning" data-positive="true" data-text="思考敏捷，常能提出獨特且有創意的見解" class="tag-btn bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">思考敏捷</button>
+                                <button onclick="toggleTag(this)" data-type="learning" data-positive="true" data-text="課堂參與度高，發言非常踴躍" class="tag-btn bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">發言踴躍</button>
+                                <button onclick="toggleTag(this)" data-type="learning" data-positive="true" data-text="作業書寫認真，內容詳實，態度十分端正" class="tag-btn bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">作業認真</button>
+                                <button onclick="toggleTag(this)" data-type="learning" data-positive="true" data-text="上課專注聆聽，能迅速消化教學要點，課室學習品質卓越" class="tag-btn bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">專注度極高</button>
+                                <button onclick="toggleTag(this)" data-type="learning" data-positive="true" data-text="思維脈絡條理清晰，具備優異的邏輯推理與分析能力" class="tag-btn bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">邏輯清晰</button>
+                                <button onclick="toggleTag(this)" data-type="learning" data-positive="true" data-text="課外閱讀習慣良好，知識面寬廣，常主動充實自我學識" class="tag-btn bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">閱讀廣泛</button>
+                                <button onclick="toggleTag(this)" data-type="learning" data-positive="true" data-text="具備出色的動手操作與探究能力，在實驗及科學探究中表現極佳" class="tag-btn bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">探究實作佳</button>
+                                <button onclick="toggleTag(this)" data-type="learning" data-positive="true" data-text="求知慾旺盛，遇到難題時能展現鍥而不捨的鑽研精神，令人讚許" class="tag-btn bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">求知慾旺盛</button>
+                            </div>
+                        </div>
+                        <!-- 改進期許 -->
+                        <div>
+                            <div class="text-xs font-semibold text-amber-700 bg-amber-50 inline-block px-2 py-0.5 rounded mb-2">建議期許</div>
+                            <div class="flex flex-wrap gap-2">
+                                <button onclick="toggleTag(this)" data-type="learning" data-positive="false" data-text="上課容易分心，需多加強專注力的培養" class="tag-btn bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">易分心</button>
+                                <button onclick="toggleTag(this)" data-type="learning" data-positive="false" data-text="學習能力不錯，但常因粗心大意而影響學習成效" class="tag-btn bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">粗心大意</button>
+                                <button onclick="toggleTag(this)" data-type="learning" data-positive="false" data-text="面對學習瓶頸時容易氣餒，需要建立挫折忍受力" class="tag-btn bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">易氣餒</button>
+                                <button onclick="toggleTag(this)" data-type="learning" data-positive="false" data-text="課後若能多花時間複習，學習表現定能更上一層樓" class="tag-btn bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">需多複習</button>
+                                <button onclick="toggleTag(this)" data-type="learning" data-positive="false" data-text="在文字表達上思維較慢，需多練習流暢度與書寫速度" class="tag-btn bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">書寫較慢</button>
+                                <button onclick="toggleTag(this)" data-type="learning" data-positive="false" data-text="學習多流於應付交差，缺乏自主探求與多加練習的熱忱" class="tag-btn bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">缺乏探求熱忱</button>
+                                <button onclick="toggleTag(this)" data-type="learning" data-positive="false" data-text="學習領域偏好分明，部分弱勢科目需主動加強，促使均衡發展" class="tag-btn bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">偏科現象</button>
+                                <button onclick="toggleTag(this)" data-type="learning" data-positive="false" data-text="作業偶有漏交或書寫馬虎的狀況，宜加強個人的課業管理與自律" class="tag-btn bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">作業偶有遺漏</button>
+                                <button onclick="toggleTag(this)" data-type="learning" data-positive="false" data-text="吸收知識速度快但不求甚解，面對深奧理論宜更有耐心地深入鑽研" class="tag-btn bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">不求甚解</button>
+                                <button onclick="toggleTag(this)" data-type="learning" data-positive="false" data-text="上課常有良好想法，但在公開發表時顯得退縮，期待未來多展現自信" class="tag-btn bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">發表時退縮</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="border-slate-100">
+
+                    <!-- 日常生活表現 -->
+                    <div class="space-y-4">
+                        <h3 class="font-bold text-slate-800 flex items-center gap-2 border-l-4 border-amber-500 pl-2">
+                            ☀️ 日常生活表現 (共20項)
+                        </h3>
+                        <!-- 正面特質 -->
+                        <div>
+                            <div class="text-xs font-semibold text-emerald-700 bg-emerald-50 inline-block px-2 py-0.5 rounded mb-2">正面肯定</div>
+                            <div class="flex flex-wrap gap-2">
+                                <button onclick="toggleTag(this)" data-type="daily" data-positive="true" data-text="在校遵守各項常規，自我約束力極佳" class="tag-btn bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">遵守紀律</button>
+                                <button onclick="toggleTag(this)" data-type="daily" data-positive="true" data-text="愛惜班級公物，維護環境不遺餘力" class="tag-btn bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">愛護公物</button>
+                                <button onclick="toggleTag(this)" data-type="daily" data-positive="true" data-text="擔任班幹部認真負責，熱心為班級大眾服務" class="tag-btn bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">熱心服務</button>
+                                <button onclick="toggleTag(this)" data-type="daily" data-positive="true" data-text="作息守時，做事認真盡責，令人安心" class="tag-btn bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">守時負責</button>
+                                <button onclick="toggleTag(this)" data-type="daily" data-positive="true" data-text="個人衛生習慣優良，座位始終保持乾淨整齊" class="tag-btn bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">整潔習慣佳</button>
+                                <button onclick="toggleTag(this)" data-type="daily" data-positive="true" data-text="個人自理能力優異，學用品收納井井有條，極具自主生活規劃力" class="tag-btn bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">自理能力佳</button>
+                                <button onclick="toggleTag(this)" data-type="daily" data-positive="true" data-text="愛護校園與班級整潔，總是主動積極參與灑掃與垃圾分類" class="tag-btn bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">環保意識強</button>
+                                <button onclick="toggleTag(this)" data-type="daily" data-positive="true" data-text="日常言行充滿朝氣與自信，具備正向思考特質，深具活力" class="tag-btn bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">積極陽光</button>
+                                <button onclick="toggleTag(this)" data-type="daily" data-positive="true" data-text="辦理師長交辦的事務極具條理，並能準時回報，展現高度幹練與效率" class="tag-btn bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">辦事有條理</button>
+                                <button onclick="toggleTag(this)" data-type="daily" data-positive="true" data-text="非常信守承諾，答應的事務定會全力以赴去實現，極受信賴" class="tag-btn bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">誠信重承諾</button>
+                            </div>
+                        </div>
+                        <!-- 改進期許 -->
+                        <div>
+                            <div class="text-xs font-semibold text-amber-700 bg-amber-50 inline-block px-2 py-0.5 rounded mb-2">建議期許</div>
+                            <div class="flex flex-wrap gap-2">
+                                <button onclick="toggleTag(this)" data-type="daily" data-positive="false" data-text="偶爾會遺漏文具或課本，需養成整理書包的好習慣" class="tag-btn bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">忘帶文具</button>
+                                <button onclick="toggleTag(this)" data-type="daily" data-positive="false" data-text="偶有遲到狀況，建議調整作息，培養時間觀念" class="tag-btn bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">偶有遲到</button>
+                                <button onclick="toggleTag(this)" data-type="daily" data-positive="false" data-text="座位的整潔度尚有進步空間，需定期整理抽屜與學用品" class="tag-btn bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">抽屜凌亂</button>
+                                <button onclick="toggleTag(this)" data-type="daily" data-positive="false" data-text="上課時偶爾會與鄰座同學私下交談，需注意課堂禮儀" class="tag-btn bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">愛講私話</button>
+                                <button onclick="toggleTag(this)" data-type="daily" data-positive="false" data-text="情緒起伏明顯，需學習合適的情緒抒發與調適管道" class="tag-btn bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">情緒起伏</button>
+                                <button onclick="toggleTag(this)" data-type="daily" data-positive="false" data-text="執行掃除、打飯等日常庶務時動作較顯拖延，宜多加強做事效率" class="tag-btn bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">做事稍顯拖沓</button>
+                                <button onclick="toggleTag(this)" data-type="daily" data-positive="false" data-text="對於值日生或分組掃除的職責有時需要他人多次提醒，責任心仍待強化" class="tag-btn bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">責任心稍弱</button>
+                                <button onclick="toggleTag(this)" data-type="daily" data-positive="false" data-text="午餐時常有剩食狀況，期盼能慢慢養成不挑食並珍惜食物的好習慣" class="tag-btn bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">珍惜食物</button>
+                                <button onclick="toggleTag(this)" data-type="daily" data-positive="false" data-text="下課在教室或走廊上偶爾會有奔跑嬉鬧的危險行為，需多加強個人的安全意識" class="tag-btn bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">安全意識較弱</button>
+                                <button onclick="toggleTag(this)" data-type="daily" data-positive="false" data-text="日常生活規律性容易受週末放假影響，期待能建立更穩定優質的個人生活作息" class="tag-btn bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all">規規律性待加強</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- 右側：生成設定、引擎與輸出成果區 (5格) -->
+            <div class="lg:col-span-5 space-y-6">
+                
+                <!-- 生成設定區 -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 space-y-4">
+                    <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                        <span class="w-2.5 h-6 bg-emerald-500 rounded-full inline-block"></span>
+                        第三步：設定與生成
+                    </h2>
+
+                    <!-- 引擎切換 -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1.5">選擇生成引擎</label>
+                        <div class="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl">
+                            <button onclick="setEngine('local')" id="btnEngineLocal" class="py-2.5 rounded-lg font-medium transition-all bg-white text-slate-900 shadow-sm">
+                                本地快捷引擎
+                            </button>
+                            <button onclick="setEngine('ai')" id="btnEngineAI" class="py-2.5 rounded-lg font-medium transition-all text-slate-500 hover:text-slate-800">
+                                智慧 AI 引擎
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- AI 設定 (預設隱藏，切換至 AI 時顯示) -->
+                    <div id="aiSettingsPanel" class="hidden bg-emerald-50 p-4 rounded-xl border border-emerald-100 space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-bold text-emerald-800">Gemini AI 設定</span>
+                            <span class="text-[14px] text-emerald-600">自動串接 Gemini 大模型</span>
+                        </div>
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="block text-sm font-medium text-slate-600">Gemini API Key</label>
+                                <a href="https://aistudio.google.com/" target="_blank" class="text-emerald-600 hover:text-emerald-800 underline font-semibold flex items-center gap-1 transition-colors">
+                                    🔑 免費取得 API Key 🔗
+                                </a>
+                            </div>
+                            <input type="password" id="customApiKey" placeholder="輸入您的 Gemini API Key (可選)" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-emerald-500">
+                            <span class="text-[12px] text-slate-400 mt-1 block">若留空，系統將使用預設的免認證快速通道進行生成。</span>
+                        </div>
+                    </div>
+
+                    <!-- 口氣點選 (卡片式 Segmented Control) -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1.5">生成口氣</label>
+                        <div class="grid grid-cols-3 gap-1 bg-slate-100 p-1 rounded-xl">
+                            <button type="button" onclick="selectTone('warm')" id="btnToneWarm" class="py-2 rounded-lg text-sm font-medium transition-all text-slate-500 hover:text-slate-800">
+                                溫暖鼓勵
+                            </button>
+                            <button type="button" onclick="selectTone('professional')" id="btnToneProfessional" class="py-2 rounded-lg text-sm font-semibold transition-all bg-white text-slate-900 shadow-sm">
+                                客觀專業
+                            </button>
+                            <button type="button" onclick="selectTone('earnest')" id="btnToneEarnest" class="py-2 rounded-lg text-sm font-medium transition-all text-slate-500 hover:text-slate-800">
+                                真誠期盼
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 字數點選 (卡片式 Segmented Control) -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1.5">預期字數 (嚴格限制在 200 字以內)</label>
+                        <div class="grid grid-cols-3 gap-1 bg-slate-100 p-1 rounded-xl">
+                            <button type="button" onclick="selectWordCount(50)" id="btnWc50" class="py-2 rounded-lg text-sm font-medium transition-all text-slate-500 hover:text-slate-800">
+                                50字左右
+                            </button>
+                            <button type="button" onclick="selectWordCount(100)" id="btnWc100" class="py-2 rounded-lg text-sm font-semibold transition-all bg-white text-slate-900 shadow-sm">
+                                100字左右
+                            </button>
+                            <button type="button" onclick="selectWordCount(150)" id="btnWc150" class="py-2 rounded-lg text-sm font-medium transition-all text-slate-500 hover:text-slate-800">
+                                150字以上
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 執行生成按鈕 -->
+                    <button onclick="generateComment()" id="btnGenerate" class="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold py-3 px-6 rounded-xl transition-all shadow-md shadow-emerald-200 flex items-center justify-center gap-2">
+                        <!-- Wand Icon -->
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                        <span>立即生成評語</span>
+                    </button>
+                </div>
+
+                <!-- 生成結果輸出區 (將高度從 h-[380px] 拉高至 h-[480px]，使 200 字內評語能在 18px 字體下一眼看清) -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col h-[480px]">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                            ✨ 生成評語結果 <span id="charCount" class="text-sm font-normal text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full ml-1">(0 字)</span>
+                        </h2>
+                        <!-- 快速清空 -->
+                        <button onclick="clearOutput()" class="text-sm text-slate-400 hover:text-rose-500 transition-colors">
+                            重置結果
+                        </button>
+                    </div>
+
+                    <!-- 文本區域 -->
+                    <div class="relative flex-grow">
+                        <textarea id="outputText" oninput="updateCharCount()" placeholder="點選左側特質並設定完畢後，點擊「立即生成評語」..." class="w-full h-full p-4 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all resize-none"></textarea>
+                    </div>
+
+                    <!-- 動作按鈕 -->
+                    <div class="grid grid-cols-2 gap-4 mt-4">
+                        <button onclick="copyOutput()" class="bg-slate-800 hover:bg-slate-900 active:scale-[0.98] text-white font-semibold py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2">
+                            <!-- Copy Icon -->
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                            一鍵複製評語
+                        </button>
+                        <button onclick="shareResult()" class="border border-slate-200 hover:bg-slate-50 active:scale-[0.98] text-slate-700 font-semibold py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2">
+                            <!-- Share/Send Icon -->
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 10.742l4.136-2.068a2 2 0 11.854 1.708l-4.135 2.068a2 2 0 11-.854-1.708zM18 16a2 2 0 11-4 0 2 2 0 014 0zM6 12a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                            分享傳送
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- 頁腳 -->
+    <footer class="bg-slate-900 text-slate-400 py-6 text-center border-t border-slate-800 w-full">
+        <p class="text-sm">
+            © 2026 成績單評語生成器 ｜ 專為國小教師打造之教學輔助工具
+        </p>
+        <p class="text-xs text-slate-500 mt-1">
+            由 <strong>lucky老師</strong> 精心設計與維護 ✏️ 祝您教學順利，班級經營得心應手
+        </p>
+    </footer>
+
+    <!-- 客製化 Toast 訊息框 -->
+    <div id="toast" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-xl shadow-xl transition-all duration-300 opacity-0 translate-y-4 pointer-events-none z-50 flex items-center gap-2">
+        <span id="toastIcon">💡</span>
+        <span id="toastText">訊息</span>
+    </div>
+
+    <script>
+        // 全域變數
+        let selectedTags = [];
+        let currentEngine = 'local';
+        const apiKey = ""; // 預設內建 Gemini API Key 為空字串
+
+        // 狀態管理變數 (口氣與預計字數)
+        let selectedTone = 'professional';
+        let selectedWordCount = 100;
+
+        // 頁面初始化
+        window.onload = function() {
+            // 從 localStorage 恢復先前儲存的自訂 API Key (永久保存機制)
+            const savedKey = localStorage.getItem('user_gemini_api_key');
+            if (savedKey) {
+                // 自動清除任何殘留的不可見/非 ASCII 隱形字元
+                document.getElementById('customApiKey').value = savedKey.trim().replace(/[^\x20-\x7E]/g, '');
+            }
+
+            // 註冊即時儲存與即時清除監聽器
+            document.getElementById('customApiKey').addEventListener('input', function() {
+                // 強效防呆：過濾所有 invisible characters 與 blank spaces
+                const cleanVal = this.value.trim().replace(/[^\x20-\x7E]/g, '');
+                if (cleanVal) {
+                    localStorage.setItem('user_gemini_api_key', cleanVal);
+                } else {
+                    // 若清空輸入框，同步從暫存中刪除
+                    localStorage.removeItem('user_gemini_api_key');
+                }
+            });
+        };
+
+        // 標籤選取機制
+        function toggleTag(button) {
+            const text = button.getAttribute('data-text');
+            const type = button.getAttribute('data-type');
+            const isPositive = button.getAttribute('data-positive') === 'true';
+
+            const existingIndex = selectedTags.findIndex(item => item.text === text);
+
+            if (existingIndex > -1) {
+                // 取消選取
+                selectedTags.splice(existingIndex, 1);
+                button.classList.remove('bg-emerald-600', 'text-white', 'border-emerald-600', 'hover:bg-emerald-700');
+                button.classList.remove('bg-amber-600', 'text-white', 'border-amber-600', 'hover:bg-amber-700');
+                button.classList.add('bg-slate-100', 'text-slate-700');
+            } else {
+                // 選取標籤
+                selectedTags.push({ text, type, isPositive });
+                button.classList.remove('bg-slate-100', 'text-slate-700');
+                if (isPositive) {
+                    button.classList.add('bg-emerald-600', 'text-white', 'border-emerald-600', 'hover:bg-emerald-700');
+                } else {
+                    button.classList.add('bg-amber-600', 'text-white', 'border-amber-600', 'hover:bg-amber-700');
+                }
+            }
+        }
+
+        // 清空所有標籤
+        function clearAllTags() {
+            selectedTags = [];
+            document.querySelectorAll('.tag-btn').forEach(btn => {
+                btn.className = "tag-btn bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 px-3 py-1.5 rounded-xl border border-transparent transition-all";
+            });
+            showToast("已清空所有特質選擇", "🧹");
+        }
+
+        // 設定生成引擎
+        function setEngine(engine) {
+            currentEngine = engine;
+            const btnLocal = document.getElementById('btnEngineLocal');
+            const btnAI = document.getElementById('btnEngineAI');
+            const aiSettingsPanel = document.getElementById('aiSettingsPanel');
+
+            if (engine === 'local') {
+                btnLocal.className = "py-2.5 rounded-lg font-medium transition-all bg-white text-slate-900 shadow-sm";
+                btnAI.className = "py-2.5 rounded-lg font-medium transition-all text-slate-500 hover:text-slate-800";
+                aiSettingsPanel.classList.add('hidden');
+                showToast("切換為「本地快捷引擎」，生成速度極快！", "⚡");
+            } else {
+                btnAI.className = "py-2.5 rounded-lg font-medium transition-all bg-white text-slate-900 shadow-sm";
+                btnLocal.className = "py-2.5 rounded-lg font-medium transition-all text-slate-500 hover:text-slate-800";
+                aiSettingsPanel.classList.remove('hidden');
+                showToast("切換為「智慧 AI 引擎」，支援語意大模型撰寫！", "🤖");
+            }
+        }
+
+        // 口氣切換控制
+        function selectTone(tone) {
+            selectedTone = tone;
+            const btnWarm = document.getElementById('btnToneWarm');
+            const btnProf = document.getElementById('btnToneProfessional');
+            const btnEarnest = document.getElementById('btnToneEarnest');
+
+            // 重設樣式
+            [btnWarm, btnProf, btnEarnest].forEach(btn => {
+                btn.className = "py-2 rounded-lg text-sm font-medium transition-all text-slate-500 hover:text-slate-800";
+            });
+
+            // 啟動選中樣式
+            if (tone === 'warm') {
+                btnWarm.className = "py-2 rounded-lg text-sm font-semibold transition-all bg-white text-slate-900 shadow-sm";
+            } else if (tone === 'professional') {
+                btnProf.className = "py-2 rounded-lg text-sm font-semibold transition-all bg-white text-slate-900 shadow-sm";
+            } else if (tone === 'earnest') {
+                btnEarnest.className = "py-2 rounded-lg text-sm font-semibold transition-all bg-white text-slate-900 shadow-sm";
+            }
+        }
+
+        // 字數切換控制
+        function selectWordCount(count) {
+            selectedWordCount = count;
+            const btn50 = document.getElementById('btnWc50');
+            const btn100 = document.getElementById('btnWc100');
+            const btn150 = document.getElementById('btnWc150');
+
+            // 重設樣式
+            [btn50, btn100, btn150].forEach(btn => {
+                btn.className = "py-2 rounded-lg text-sm font-medium transition-all text-slate-500 hover:text-slate-800";
+            });
+
+            // 啟動選中樣式
+            if (count === 50) {
+                btn50.className = "py-2 rounded-lg text-sm font-semibold transition-all bg-white text-slate-900 shadow-sm";
+            } else if (count === 100) {
+                btn100.className = "py-2 rounded-lg text-sm font-semibold transition-all bg-white text-slate-900 shadow-sm";
+            } else if (count === 150) {
+                btn150.className = "py-2 rounded-lg text-sm font-semibold transition-all bg-white text-slate-900 shadow-sm";
+            }
+        }
+
+        // 即時計算與更新評語總字數
+        function updateCharCount() {
+            const textarea = document.getElementById('outputText');
+            const countSpan = document.getElementById('charCount');
+            const len = textarea.value.length;
+
+            countSpan.textContent = `(${len} 字)`;
+
+            if (len > 200) {
+                countSpan.className = "text-sm font-semibold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full ml-1";
+            } else {
+                countSpan.className = "text-sm font-normal text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full ml-1";
+            }
+        }
+
+        // 生成主控制
+        async function generateComment() {
+            const name = document.getElementById('studentName').value.trim() || '學生';
+            const pronoun = document.querySelector('input[name="pronoun"]:checked').value;
+            const tone = selectedTone;
+            const wordCount = selectedWordCount;
+
+            if (selectedTags.length === 0) {
+                showToast("請至少勾選一項表現特質唷！", "⚠️");
+                return;
+            }
+
+            document.getElementById('outputText').value = "🚀 評語編織中，請稍候...";
+            updateCharCount();
+
+            if (currentEngine === 'local') {
+                // 使用本地快捷引擎生成
+                setTimeout(() => {
+                    const result = runLocalEngine(name, pronoun, tone, wordCount);
+                    document.getElementById('outputText').value = result;
+                    updateCharCount();
+                    showToast("本地快捷評語生成成功！", "✅");
+                }, 400);
+            } else {
+                // 使用智慧 AI 引擎 (Gemini API)
+                await runAIEngine(name, pronoun, tone, wordCount);
+            }
+        }
+
+        // 本地快捷引擎演算法
+        function runLocalEngine(name, pronoun, tone, wordCount) {
+            const positiveTraits = selectedTags.filter(t => t.isPositive).map(t => t.text.replace(/{name}/g, name).replace(/{pronoun}/g, pronoun));
+            const negativeTraits = selectedTags.filter(t => !t.isPositive).map(t => t.text.replace(/{name}/g, name).replace(/{pronoun}/g, pronoun));
+
+            let intro = "";
+            let outro = "";
+
+            // 根據口氣客製起頭與結尾
+            if (tone === "warm") {
+                intro = `${name}是一位討人喜愛的孩子。本學期，我們高興看見他有了成長。`;
+                outro = `相信只要${pronoun}保持熱情，未來一定會更穩健！加油！`;
+            } else if (tone === "earnest") {
+                intro = `老師一直對${name}寄予厚望。${pronoun}點滴的累積與進步都深留在心中。`;
+                outro = `誠摯期盼${name}發揮特長，勇敢迎向新挑戰。`;
+            } else { // professional (客觀專業)
+                intro = "";
+                outro = `期盼能共同輔導其克服短處、發揚長處，使各項表現更臻卓越。`;
+            }
+
+            // 組裝特質點描
+            let bodyText = "";
+            if (positiveTraits.length > 0) {
+                bodyText += `在校時，${name}${positiveTraits.join('，且')}`;
+            }
+            if (negativeTraits.length > 0) {
+                if (bodyText !== "") {
+                    bodyText += `。但在另一方面，`;
+                } else {
+                    bodyText += `然而，`;
+                }
+                bodyText += `${negativeTraits.join('；同時')}`;
+            }
+            if (bodyText !== "") {
+                bodyText += "。";
+            }
+
+            let fullText = `${intro}${bodyText}${outro}`;
+
+            // 依字數要求裁減或補充
+            if (wordCount <= 50) {
+                fullText = `${name}表現優良，${positiveTraits[0] || '積極努力'}。唯${negativeTraits[0] || '偶有不專注'}，期許未來更臻完美。`;
+            } else if (wordCount === 100) {
+                if (fullText.length > 130) {
+                    fullText = fullText.substring(0, 110) + "。期待未來更好的發展！";
+                }
+            } else {
+                fullText += ` 學習是一場長跑，點滴的修正都將累積成未來的養分。老師對你充滿信心。`;
+            }
+
+            // 【嚴格落實：200字防火牆安全防禦線】
+            if (fullText.length > 200) {
+                fullText = fullText.substring(0, 197);
+                const lastPeriod = Math.max(fullText.lastIndexOf('。'), fullText.lastIndexOf('！'), fullText.lastIndexOf('？'));
+                if (lastPeriod > 100) {
+                    fullText = fullText.substring(0, lastPeriod + 1);
+                } else {
+                    fullText += '...';
+                }
+            }
+
+            return fullText;
+        }
+
+        // 智慧 AI 引擎演算法 (串接 Gemini API)
+        async function runAIEngine(name, pronoun, tone, wordCount) {
+            // 讀取時執行強效清空不可見 Unicode/非 ASCII 字元防護，杜絕 'API key not valid'
+            let rawUserKey = document.getElementById('customApiKey').value;
+            let userApiKey = rawUserKey.trim().replace(/[^\x20-\x7E]/g, '');
+            const activeApiKey = userApiKey || apiKey;
+
+            if (userApiKey) {
+                localStorage.setItem('user_gemini_api_key', userApiKey);
+            }
+
+            if (!activeApiKey) {
+                document.getElementById('outputText').value = "【系統提示】由於尚未設定自訂的 Gemini API Key，已為您自動切換至「本地快捷引擎」進行無縫生成！\n\n建議您在「智慧 AI 設定」中點擊「🔑 免費取得 API Key」，輸入您的專屬 Key 後，即可開啟完整的 AI 潤飾功能喔！";
+                setEngine('local');
+                setTimeout(() => { generateComment(); }, 1500);
+                return;
+            }
+
+            const posTexts = selectedTags.filter(t => t.isPositive).map(t => t.text);
+            const negTexts = selectedTags.filter(t => !t.isPositive).map(t => t.text);
+
+            const prompt = `你是一位專業且溫暖的國小導師（請自稱「老師」，千萬不要使用 lucky老師 或任何特定姓名）。
+請為以下學生撰寫一份成績單綜合評語：
+- 學生姓名：${name}
+- 學生稱謂：${pronoun} (例如：他、她)
+- 選擇的人際與生活正面特質：${posTexts.join(', ')}
+- 選擇的改進期許與建議特質：${negTexts.join(', ')}
+- 指定口氣風格：${tone === 'warm' ? '溫暖鼓勵' : tone === 'earnest' ? '真誠期盼' : '客觀專業'}
+- 指定字數：大約 ${wordCount} 字，且「總字數絕對絕對不能超過 200 個字（含標點符號）」。
+
+撰寫規則：
+1. 必須流暢融合成一整段連貫、通順的中文評語，千萬「不要」出現項目符號或分點條列。
+2. 將上述選擇的正反特質自然融入評語中，正面特質給予誠懇肯定，反面建議必須表達得極為婉轉且富有教育指導意義。
+3. 口氣必須精準符合設定的風格，且「總字數絕對不能超過 200 個字」。若內容太長，請簡短並濃縮文字。
+4. 評語中凡是提到導師自己時，請一律使用「老師」稱呼，千萬不要出現「lucky老師」或「幸運老師」。
+5. 請直接輸出最後的評語文字，不要包含 Markdown 標記、引號、備註或任何前言。`;
+
+            const systemPrompt = "你是一位精通教育心理學與課室經營的優秀國小導師，擅長用溫和且富有發展性、鼓勵性的詞藻為學生撰寫操行與成績單評語。評語中自稱一律為「老師」，不使用任何特定姓名。最終輸出的總字數必須控制在 200 字以內（極重要限制）。";
+
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] }
+            };
+
+            try {
+                // 傳入 userApiKey 供引擎判定首選模型
+                const responseData = await callGeminiAPIWithBackoff(payload, activeApiKey, userApiKey !== "");
+                const generatedText = responseData.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (generatedText) {
+                    let cleanedText = generatedText.trim();
+                    
+                    // 【雙重防線：200字硬體式強制裁減】
+                    if (cleanedText.length > 200) {
+                        cleanedText = cleanedText.substring(0, 200);
+                        const lastPunc = Math.max(cleanedText.lastIndexOf('。'), cleanedText.lastIndexOf('！'), cleanedText.lastIndexOf('？'));
+                        if (lastPunc > 120) {
+                            cleanedText = cleanedText.substring(0, lastPunc + 1);
+                        }
+                    }
+                    
+                    document.getElementById('outputText').value = cleanedText;
+                    document.getElementById('outputText').scrollTop = 0; // 置頂
+                    updateCharCount();
+                    showToast("AI 智慧評語生成完成！", "🤖");
+                } else {
+                    throw new Error("回傳格式異常，未取得生成的評語。");
+                }
+            } catch (err) {
+                document.getElementById('outputText').value = `【AI 生成失敗】\n原因：${err.message}\n\n系統已自動為您切換至「本地快捷引擎」重新生成評語，以防耽誤您的工作。`;
+                updateCharCount();
+                setTimeout(() => {
+                    setEngine('local');
+                    generateComment();
+                }, 4000);
+            }
+        }
+
+        // 具備指數型退避與多模型自動相容機制的 API 呼叫函式
+        async function callGeminiAPIWithBackoff(payload, key, isCustomKey) {
+            // 決定候選模型列表
+            let models = ["gemini-2.5-flash-preview-09-2025"];
+            if (isCustomKey) {
+                models = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-2.5-flash-preview-09-2025"];
+            }
+
+            let lastError = null;
+
+            for (let model of models) {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+                let delay = 1000;
+                const maxRetries = 3;
+
+                for (let i = 0; i < maxRetries; i++) {
+                    try {
+                        const response = await fetch(url, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(payload)
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok) {
+                            return data; // 成功取得資料
+                        } else {
+                            const errMsg = data.error?.message || response.statusText || "未知錯誤";
+                            const errCode = data.error?.code || response.status;
+                            lastError = new Error(`[${model}] 錯誤 (代碼 ${errCode}): ${errMsg}`);
+
+                            // 如果是模型不存在 (404) 或不支援，直接中斷當前模型的重試，切換下一個模型
+                            if (response.status === 404 || errMsg.toLowerCase().includes("not found") || errMsg.toLowerCase().includes("model")) {
+                                break; 
+                            }
+
+                            // 如果是金鑰無效 (403 或 400 提示 API key 錯誤)，直接拋出錯誤，不進行無謂的重試
+                            if (response.status === 403 || errMsg.toLowerCase().includes("api key") || errMsg.toLowerCase().includes("key is not valid")) {
+                                throw lastError;
+                            }
+                        }
+                    } catch (error) {
+                        lastError = error;
+                        // 如果錯誤是被直接拋出的金鑰無效錯誤，則繼續向上拋出
+                        if (error.message.includes("API key") || error.message.includes("代碼 403")) {
+                            throw error;
+                        }
+                    }
+
+                    // 指數退避等待
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2;
+                }
+            }
+            throw lastError || new Error("無法連線至 AI 引擎。");
+        }
+
+        // 清空結果
+        function clearOutput() {
+            document.getElementById('outputText').value = "";
+            updateCharCount();
+            showToast("輸出結果已重置", "🧹");
+        }
+
+        // 一鍵複製功能 (相容 iframe 安全機制)
+        function copyOutput() {
+            const textarea = document.getElementById('outputText');
+            if (!textarea.value.trim() || textarea.value.startsWith("🚀") || textarea.value.startsWith("【")) {
+                showToast("目前沒有可供複製的有效評語喔！", "⚠️");
+                return;
+            }
+
+            textarea.select();
+            textarea.setSelectionRange(0, 99999); // 手機裝置適配
+
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    showToast("評語已成功複製到剪貼簿！", "📋");
+                } else {
+                    throw new Error("拷貝無效");
+                }
+            } catch (err) {
+                showToast("複製失敗，請手動全選複製。", "❌");
+            }
+        }
+
+        // 分享/傳送
+        function shareResult() {
+            const text = document.getElementById('outputText').value.trim();
+            if (!text) {
+                showToast("無內容可分享！", "⚠️");
+                return;
+            }
+            // 嘗試使用原生 Web Share API
+            if (navigator.share) {
+                navigator.share({
+                    title: '成績單評語分享',
+                    text: text
+                }).catch(() => {});
+            } else {
+                // 降級處理：快速複製並提示
+                copyOutput();
+                showToast("已為您自動複製評語，可直接貼上至 Line 或信件！", "📨");
+            }
+        }
+
+        // 自訂非阻塞 Toast 提示
+        function showToast(message, icon = "💡") {
+            const toast = document.getElementById('toast');
+            const toastText = document.getElementById('toastText');
+            const toastIcon = document.getElementById('toastIcon');
+
+            toastText.textContent = message;
+            toastIcon.textContent = icon;
+
+            // 顯示
+            toast.classList.remove('opacity-0', 'translate-y-4', 'pointer-events-none');
+            toast.classList.add('opacity-100', 'translate-y-0');
+
+            // 3秒後消失
+            setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', 'translate-y-4', 'pointer-events-none');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
